@@ -1,31 +1,45 @@
-local Players = game:GetService("Players")
-local TARGET_USERNAME = "hoilholi_rezero"
+-- วางใน LocalScript (StarterPlayerScripts หรือ StarterCharacterScripts)
 
-local function setOneHP(humanoid)
-    -- รอ 0.1 วินาที ให้ระบบในเกมตั้งค่า Health ก่อน
-    task.wait(0.1)
-    humanoid.Health = 1
+local player = game.Players.LocalPlayer
+local teleportPosition = nil
+
+-- GUI สร้างเองแบบง่าย
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "SavePointGUI"
+local button = Instance.new("TextButton", screenGui)
+button.Size = UDim2.new(0,150,0,50)
+button.Position = UDim2.new(0,20,0,100)
+button.Text = "Save Point"
+
+-- ฟังก์ชันสำหรับเซฟพิกัด
+button.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		teleportPosition = char.HumanoidRootPart.Position
+		button.Text = "Saved!"
+		wait(1)
+		button.Text = "Save Point"
+	end
+end)
+
+-- ฟังก์ชันสำหรับเช็ค HP และวาปกลับ
+local function setupAutoTeleport(humanoid)
+	humanoid.HealthChanged:Connect(function(health)
+		if teleportPosition and (health/humanoid.MaxHealth) <= 0.15 and health > 0 then
+			local char = player.Character
+			if char and char:FindFirstChild("HumanoidRootPart") then
+				char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
+			end
+		end
+	end)
 end
 
-local function onCharacterAdded(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    setOneHP(humanoid)
-    -- ป้องกัน MaxHealth เปลี่ยน
-    humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
-        setOneHP(humanoid)
-    end)
-end
+player.CharacterAdded:Connect(function(char)
+	local hum = char:WaitForChild("Humanoid")
+	setupAutoTeleport(hum)
+end)
 
-local function onPlayerAdded(player)
-    if player.Name == TARGET_USERNAME then
-        player.CharacterAdded:Connect(onCharacterAdded)
-        if player.Character then
-            onCharacterAdded(player.Character)
-        end
-    end
-end
-
-Players.PlayerAdded:Connect(onPlayerAdded)
-for _, player in ipairs(Players:GetPlayers()) do
-    onPlayerAdded(player)
+-- เผื่อผู้เล่น spawn อยู่แล้ว
+if player.Character and player.Character:FindFirstChild("Humanoid") then
+	setupAutoTeleport(player.Character.Humanoid)
 end
