@@ -1,19 +1,19 @@
 local Players = game:GetService("Players")
-
-local TARGET_USERNAME = "ThachaiWiyaSchool" -- กำหนดชื่อผู้ใช้ของคุณที่นี่
+local TARGET_USERNAME = "hoilholi_rezero"
 
 local function setOneHP(humanoid)
+    -- รอ 0.1 วินาที ให้ระบบในเกมตั้งค่า Health ก่อน
+    task.wait(0.1)
     humanoid.Health = 1
 end
 
 local function onCharacterAdded(character)
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
+    local humanoid = character:WaitForChild("Humanoid")
+    setOneHP(humanoid)
+    -- ป้องกัน MaxHealth เปลี่ยน
+    humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
         setOneHP(humanoid)
-        humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
-            setOneHP(humanoid)
-        end)
-    end
+    end)
 end
 
 local function onPlayerAdded(player)
@@ -26,8 +26,6 @@ local function onPlayerAdded(player)
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
-
--- สำหรับกรณีที่ Script ถูกใส่หลังจากที่ผู้เล่นเข้ามาแล้ว
 for _, player in ipairs(Players:GetPlayers()) do
     onPlayerAdded(player)
 end
