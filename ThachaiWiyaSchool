@@ -1,0 +1,33 @@
+local Players = game:GetService("Players")
+
+local TARGET_USERNAME = "ThachaiWiyaSchool" -- กำหนดชื่อผู้ใช้ของคุณที่นี่
+
+local function setOneHP(humanoid)
+    humanoid.Health = 1
+end
+
+local function onCharacterAdded(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        setOneHP(humanoid)
+        humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
+            setOneHP(humanoid)
+        end)
+    end
+end
+
+local function onPlayerAdded(player)
+    if player.Name == TARGET_USERNAME then
+        player.CharacterAdded:Connect(onCharacterAdded)
+        if player.Character then
+            onCharacterAdded(player.Character)
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+-- สำหรับกรณีที่ Script ถูกใส่หลังจากที่ผู้เล่นเข้ามาแล้ว
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
