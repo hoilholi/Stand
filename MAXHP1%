@@ -1,0 +1,28 @@
+local player = game.Players.LocalPlayer
+local function setupHumanoid(humanoid)
+	local maxHealth = humanoid.MaxHealth
+	local targetHealth = maxHealth * 0.01
+
+	local lastHealth = humanoid.Health
+
+	humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+		if humanoid.Health < lastHealth then
+			-- ถ้าโดนดาเมจ
+			if humanoid.Health > targetHealth then
+				humanoid.Health = targetHealth
+			end
+		end
+		lastHealth = humanoid.Health
+	end)
+end
+
+local function onCharacterAdded(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	setupHumanoid(humanoid)
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+
+if player.Character then
+	onCharacterAdded(player.Character)
+end
