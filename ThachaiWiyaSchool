@@ -1,45 +1,160 @@
--- วางใน LocalScript (StarterPlayerScripts หรือ StarterCharacterScripts)
-
 local player = game.Players.LocalPlayer
 local teleportPosition = nil
+local teleportName = ""
+local teleporting = false
 
--- GUI สร้างเองแบบง่าย
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- GUI SETUP เหมือนเดิม
+local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SavePointGUI"
-local button = Instance.new("TextButton", screenGui)
-button.Size = UDim2.new(0,150,0,50)
-button.Position = UDim2.new(0,20,0,100)
-button.Text = "Save Point"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- ฟังก์ชันสำหรับเซฟพิกัด
-button.MouseButton1Click:Connect(function()
-	local char = player.Character
-	if char and char:FindFirstChild("HumanoidRootPart") then
-		teleportPosition = char.HumanoidRootPart.Position
-		button.Text = "Saved!"
-		wait(1)
-		button.Text = "Save Point"
-	end
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 220, 0, 160)
+frame.Position = UDim2.new(0, 20, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 25)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Save Point System"
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1, 1, 1)
+
+local nameBox = Instance.new("TextBox", frame)
+nameBox.Size = UDim2.new(1, -20, 0, 25)
+nameBox.Position = UDim2.new(0, 10, 0, 35)
+nameBox.PlaceholderText = "Point Name (Optional)"
+nameBox.Font = Enum.Font.Gotham
+nameBox.TextSize = 15
+nameBox.Text = ""
+nameBox.ClearTextOnFocus = false
+
+local saveBtn = Instance.new("TextButton", frame)
+saveBtn.Size = UDim2.new(0.45, -5, 0, 30)
+saveBtn.Position = UDim2.new(0.05, 0, 0, 70)
+saveBtn.Text = "Save Point"
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 15
+saveBtn.BackgroundColor3 = Color3.fromRGB(64, 190, 64)
+saveBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local clearBtn = Instance.new("TextButton", frame)
+clearBtn.Size = UDim2.new(0.45, -5, 0, 30)
+clearBtn.Position = UDim2.new(0.5, 10, 0, 70)
+clearBtn.Text = "Clear"
+clearBtn.Font = Enum.Font.GothamBold
+clearBtn.TextSize = 15
+clearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+clearBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local infoLabel = Instance.new("TextLabel", frame)
+infoLabel.Size = UDim2.new(1, -20, 0, 36)
+infoLabel.Position = UDim2.new(0, 10, 0, 110)
+infoLabel.Text = "No Save Point"
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextSize = 14
+infoLabel.TextColor3 = Color3.new(1, 1, 1)
+infoLabel.BackgroundTransparency = 1
+infoLabel.TextWrapped = true
+
+-- Sound effect for teleport
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://12222216" -- เสียงวาร์ปตัวอย่าง
+sound.Volume = 0.5
+
+-- Save point
+local function updateInfo()
+    if teleportPosition then
+        infoLabel.Text = string.format("Saved:\n%s\n(%.1f, %.1f, %.1f)", teleportName ~= "" and teleportName or "Unnamed", teleportPosition.X, teleportPosition.Y, teleportPosition.Z)
+        infoLabel.TextColor3 = Color3.fromRGB(72, 255, 68)
+    else
+        infoLabel.Text = "No Save Point"
+        infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+end
+
+saveBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        teleportPosition = char.HumanoidRootPart.Position
+        teleportName = nameBox.Text
+        updateInfo()
+        saveBtn.Text = "Saved!"
+        task.wait(0.8)
+        saveBtn.Text = "Save Point"
+    end
 end)
 
--- ฟังก์ชันสำหรับเช็ค HP และวาปกลับ
+clearBtn.MouseButton1Click:Connect(function()
+    teleportPosition = nil
+    teleportName = ""
+    updateInfo()
+end)
+
+-- Hotkey: กด "K" เพื่อเซฟพิกัด
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if input.KeyCode == Enum.KeyCode.K and not processed then
+        saveBtn:Activate()
+    end
+end)
+
+-- วาร์ปรัวๆ เมื่อ HP ต่ำกว่า 10% หรือ 5%
+local function startTeleportSpam(humanoid)
+    teleporting = true
+    while teleporting and teleportPosition and humanoid.Health > 0 and (humanoid.Health / humanoid.MaxHealth) <= 0.1 do
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
+            sound.Parent = char.HumanoidRootPart
+            sound:Play()
+        end
+        task.wait(0.1)
+    end
+    teleporting = false
+end
+
 local function setupAutoTeleport(humanoid)
-	humanoid.HealthChanged:Connect(function(health)
-		if teleportPosition and (health/humanoid.MaxHealth) <= 0.15 and health > 0 then
-			local char = player.Character
-			if char and char:FindFirstChild("HumanoidRootPart") then
-				char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
-			end
-		end
-	end)
+    humanoid.HealthChanged:Connect(function(health)
+        if teleportPosition and health > 0 and (health / humanoid.MaxHealth) <= 0.1 and not teleporting and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+            -- เริ่มวาร์ปรัวๆ
+            startTeleportSpam(humanoid)
+        elseif teleporting and ((health / humanoid.MaxHealth) > 0.1 or health <= 0 or not teleportPosition) then
+            -- เลิกวาร์ป ถ้า HP กลับมาปกติหรือไม่มีจุดเซฟ
+            teleporting = false
+        end
+    end)
 end
 
 player.CharacterAdded:Connect(function(char)
-	local hum = char:WaitForChild("Humanoid")
-	setupAutoTeleport(hum)
+    local hum = char:WaitForChild("Humanoid")
+    setupAutoTeleport(hum)
+    if sound.Parent ~= nil then
+        sound.Parent = nil
+    end
 end)
 
--- เผื่อผู้เล่น spawn อยู่แล้ว
 if player.Character and player.Character:FindFirstChild("Humanoid") then
-	setupAutoTeleport(player.Character.Humanoid)
+    setupAutoTeleport(player.Character.Humanoid)
 end
+
+updateInfo()
+
+-- ระบบกันเตะ AFK (Anti-AFK) - ขยับทุก 5 นาที
+spawn(function()
+    while true do
+        task.wait(300) -- 5 นาที
+        -- ส่ง event ขยับเมาส์/กระโดด
+        local VirtualUser = game:GetService("VirtualUser")
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0,0))
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
