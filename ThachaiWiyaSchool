@@ -1,109 +1,282 @@
+-- Ultimate Teleport & Utility System (LocalScript: วางใน StarterPlayerScripts)
+-- ฟีเจอร์: Save Point, Auto Teleport, Anti-Void, Anti-AFK, AntiFling, Spawn Point, สวยงาม ใช้งานง่าย
+
 local player = game.Players.LocalPlayer
 local teleportPosition = nil
 local teleportName = ""
 local teleporting = false
+local spawnPosition = nil
+local spawnName = ""
+local antiFlingEnabled = false
 
--- GUI SETUP เหมือนเดิม
+-- CONFIG
+local SAFE_Y = -30 -- Anti-Void threshold
+local RESPAWN_POSITION = Vector3.new(0, 10, 0) -- Default world spawn fallback
+
+-- GUI SETUP
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SavePointGUI"
+screenGui.Name = "UltimateTeleportGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 220, 0, 160)
-frame.Position = UDim2.new(0, 20, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-frame.BackgroundTransparency = 0.15
+frame.Size = UDim2.new(0, 320, 0, 340)
+frame.Position = UDim2.new(0, 30, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(26, 27, 34)
+frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 25)
+title.Size = UDim2.new(1, 0, 0, 38)
 title.Position = UDim2.new(0, 0, 0, 0)
-title.Text = "Save Point System"
+title.Text = "Ultimate Teleport & Utility System"
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 20
+title.TextColor3 = Color3.fromRGB(255, 221, 77)
 
-local nameBox = Instance.new("TextBox", frame)
-nameBox.Size = UDim2.new(1, -20, 0, 25)
-nameBox.Position = UDim2.new(0, 10, 0, 35)
-nameBox.PlaceholderText = "Point Name (Optional)"
-nameBox.Font = Enum.Font.Gotham
-nameBox.TextSize = 15
-nameBox.Text = ""
-nameBox.ClearTextOnFocus = false
+local yPos = 45
+
+-- Save Point section
+local savePointLabel = Instance.new("TextLabel", frame)
+savePointLabel.Size = UDim2.new(1, -20, 0, 20)
+savePointLabel.Position = UDim2.new(0, 10, 0, yPos)
+savePointLabel.Text = "Personal Save Point"
+savePointLabel.BackgroundTransparency = 1
+savePointLabel.Font = Enum.Font.GothamSemibold
+savePointLabel.TextSize = 15
+savePointLabel.TextColor3 = Color3.new(0.8,0.9,1)
+yPos = yPos + 22
+
+local saveNameBox = Instance.new("TextBox", frame)
+saveNameBox.Size = UDim2.new(0.6, -10, 0, 25)
+saveNameBox.Position = UDim2.new(0, 10, 0, yPos)
+saveNameBox.PlaceholderText = "Save Point Name (Optional)"
+saveNameBox.Font = Enum.Font.Gotham
+saveNameBox.TextSize = 14
+saveNameBox.Text = ""
+saveNameBox.ClearTextOnFocus = false
 
 local saveBtn = Instance.new("TextButton", frame)
-saveBtn.Size = UDim2.new(0.45, -5, 0, 30)
-saveBtn.Position = UDim2.new(0.05, 0, 0, 70)
-saveBtn.Text = "Save Point"
+saveBtn.Size = UDim2.new(0.19, -5, 0, 25)
+saveBtn.Position = UDim2.new(0.61, 10, 0, yPos)
+saveBtn.Text = "Save"
 saveBtn.Font = Enum.Font.GothamBold
-saveBtn.TextSize = 15
+saveBtn.TextSize = 14
 saveBtn.BackgroundColor3 = Color3.fromRGB(64, 190, 64)
-saveBtn.TextColor3 = Color3.new(1, 1, 1)
+saveBtn.TextColor3 = Color3.new(1,1,1)
 
 local clearBtn = Instance.new("TextButton", frame)
-clearBtn.Size = UDim2.new(0.45, -5, 0, 30)
-clearBtn.Position = UDim2.new(0.5, 10, 0, 70)
+clearBtn.Size = UDim2.new(0.19, -5, 0, 25)
+clearBtn.Position = UDim2.new(0.8, 15, 0, yPos)
 clearBtn.Text = "Clear"
 clearBtn.Font = Enum.Font.GothamBold
-clearBtn.TextSize = 15
+clearBtn.TextSize = 14
 clearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 clearBtn.TextColor3 = Color3.new(1, 1, 1)
+yPos = yPos + 33
 
-local infoLabel = Instance.new("TextLabel", frame)
-infoLabel.Size = UDim2.new(1, -20, 0, 36)
-infoLabel.Position = UDim2.new(0, 10, 0, 110)
-infoLabel.Text = "No Save Point"
-infoLabel.Font = Enum.Font.Gotham
-infoLabel.TextSize = 14
-infoLabel.TextColor3 = Color3.new(1, 1, 1)
-infoLabel.BackgroundTransparency = 1
-infoLabel.TextWrapped = true
+local saveInfoLabel = Instance.new("TextLabel", frame)
+saveInfoLabel.Size = UDim2.new(1, -20, 0, 40)
+saveInfoLabel.Position = UDim2.new(0, 10, 0, yPos)
+saveInfoLabel.Text = "No Save Point"
+saveInfoLabel.Font = Enum.Font.Gotham
+saveInfoLabel.TextSize = 14
+saveInfoLabel.TextColor3 = Color3.fromRGB(255,255,255)
+saveInfoLabel.BackgroundTransparency = 1
+saveInfoLabel.TextWrapped = true
+saveInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+yPos = yPos + 48
+
+-- Spawn Point section
+local spawnLabel = Instance.new("TextLabel", frame)
+spawnLabel.Size = UDim2.new(1, -20, 0, 20)
+spawnLabel.Position = UDim2.new(0, 10, 0, yPos)
+spawnLabel.Text = "Custom Spawn Point"
+spawnLabel.BackgroundTransparency = 1
+spawnLabel.Font = Enum.Font.GothamSemibold
+spawnLabel.TextSize = 15
+spawnLabel.TextColor3 = Color3.fromRGB(200,255,200)
+yPos = yPos + 22
+
+local spawnNameBox = Instance.new("TextBox", frame)
+spawnNameBox.Size = UDim2.new(0.6, -10, 0, 25)
+spawnNameBox.Position = UDim2.new(0, 10, 0, yPos)
+spawnNameBox.PlaceholderText = "Spawn Name (Optional)"
+spawnNameBox.Font = Enum.Font.Gotham
+spawnNameBox.TextSize = 14
+spawnNameBox.Text = ""
+spawnNameBox.ClearTextOnFocus = false
+
+local spawnBtn = Instance.new("TextButton", frame)
+spawnBtn.Size = UDim2.new(0.19, -5, 0, 25)
+spawnBtn.Position = UDim2.new(0.61, 10, 0, yPos)
+spawnBtn.Text = "Set"
+spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 14
+spawnBtn.BackgroundColor3 = Color3.fromRGB(64, 150, 255)
+spawnBtn.TextColor3 = Color3.new(1,1,1)
+
+local spawnClearBtn = Instance.new("TextButton", frame)
+spawnClearBtn.Size = UDim2.new(0.19, -5, 0, 25)
+spawnClearBtn.Position = UDim2.new(0.8, 15, 0, yPos)
+spawnClearBtn.Text = "Clear"
+spawnClearBtn.Font = Enum.Font.GothamBold
+spawnClearBtn.TextSize = 14
+spawnClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+spawnClearBtn.TextColor3 = Color3.new(1, 1, 1)
+yPos = yPos + 33
+
+local spawnInfoLabel = Instance.new("TextLabel", frame)
+spawnInfoLabel.Size = UDim2.new(1, -20, 0, 40)
+spawnInfoLabel.Position = UDim2.new(0, 10, 0, yPos)
+spawnInfoLabel.Text = "Default Respawn"
+spawnInfoLabel.Font = Enum.Font.Gotham
+spawnInfoLabel.TextSize = 14
+spawnInfoLabel.TextColor3 = Color3.fromRGB(255,255,255)
+spawnInfoLabel.BackgroundTransparency = 1
+spawnInfoLabel.TextWrapped = true
+spawnInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+yPos = yPos + 48
+
+-- AntiFling section
+local antiflingBtn = Instance.new("TextButton", frame)
+antiflingBtn.Size = UDim2.new(0.47, -10, 0, 32)
+antiflingBtn.Position = UDim2.new(0, 10, 0, yPos)
+antiflingBtn.Text = "Enable AntiFling"
+antiflingBtn.Font = Enum.Font.GothamBold
+antiflingBtn.TextSize = 15
+antiflingBtn.BackgroundColor3 = Color3.fromRGB(255, 120, 40)
+antiflingBtn.TextColor3 = Color3.new(1,1,1)
+
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0.47, -10, 0, 32)
+closeBtn.Position = UDim2.new(0.53, 10, 0, yPos)
+closeBtn.Text = "Close GUI"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 15
+closeBtn.BackgroundColor3 = Color3.fromRGB(140, 140, 140)
+closeBtn.TextColor3 = Color3.new(1,1,1)
+yPos = yPos + 40
+
+local tipLabel = Instance.new("TextLabel", frame)
+tipLabel.Size = UDim2.new(1, -20, 0, 36)
+tipLabel.Position = UDim2.new(0, 10, 0, yPos)
+tipLabel.Text = "Tip: กด K เพื่อ Save Point | กด L เพื่อวาร์ปไปจุดเซฟ | กด T เพื่อไปจุด Spawn"
+tipLabel.Font = Enum.Font.Gotham
+tipLabel.TextSize = 14
+tipLabel.TextColor3 = Color3.fromRGB(255,255,200)
+tipLabel.BackgroundTransparency = 1
+tipLabel.TextWrapped = true
 
 -- Sound effect for teleport
 local sound = Instance.new("Sound")
 sound.SoundId = "rbxassetid://12222216" -- เสียงวาร์ปตัวอย่าง
 sound.Volume = 0.5
 
--- Save point
-local function updateInfo()
+-- UPDATE LABELS
+local function updateSaveInfo()
     if teleportPosition then
-        infoLabel.Text = string.format("Saved:\n%s\n(%.1f, %.1f, %.1f)", teleportName ~= "" and teleportName or "Unnamed", teleportPosition.X, teleportPosition.Y, teleportPosition.Z)
-        infoLabel.TextColor3 = Color3.fromRGB(72, 255, 68)
+        saveInfoLabel.Text = string.format("Saved:\n%s\n(%.1f, %.1f, %.1f)", teleportName ~= "" and teleportName or "Unnamed", teleportPosition.X, teleportPosition.Y, teleportPosition.Z)
+        saveInfoLabel.TextColor3 = Color3.fromRGB(72, 255, 68)
     else
-        infoLabel.Text = "No Save Point"
-        infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveInfoLabel.Text = "No Save Point"
+        saveInfoLabel.TextColor3 = Color3.fromRGB(255,255,255)
     end
 end
 
+local function updateSpawnInfo()
+    if spawnPosition then
+        spawnInfoLabel.Text = string.format("Spawn:\n%s\n(%.1f, %.1f, %.1f)", spawnName ~= "" and spawnName or "Unnamed", spawnPosition.X, spawnPosition.Y, spawnPosition.Z)
+        spawnInfoLabel.TextColor3 = Color3.fromRGB(80, 180, 255)
+    else
+        spawnInfoLabel.Text = "Default Respawn"
+        spawnInfoLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    end
+end
+
+-- SAVE POINT
 saveBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         teleportPosition = char.HumanoidRootPart.Position
-        teleportName = nameBox.Text
-        updateInfo()
+        teleportName = saveNameBox.Text
+        updateSaveInfo()
         saveBtn.Text = "Saved!"
         task.wait(0.8)
-        saveBtn.Text = "Save Point"
+        saveBtn.Text = "Save"
     end
 end)
 
 clearBtn.MouseButton1Click:Connect(function()
     teleportPosition = nil
     teleportName = ""
-    updateInfo()
+    updateSaveInfo()
 end)
 
--- Hotkey: กด "K" เพื่อเซฟพิกัด
-game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-    if input.KeyCode == Enum.KeyCode.K and not processed then
-        saveBtn:Activate()
+-- SPAWN POINT
+spawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPosition = char.HumanoidRootPart.Position
+        spawnName = spawnNameBox.Text
+        updateSpawnInfo()
+        spawnBtn.Text = "Set!"
+        task.wait(0.8)
+        spawnBtn.Text = "Set"
     end
 end)
 
--- วาร์ปรัวๆ เมื่อ HP ต่ำกว่า 10% หรือ 5%
+spawnClearBtn.MouseButton1Click:Connect(function()
+    spawnPosition = nil
+    spawnName = ""
+    updateSpawnInfo()
+end)
+
+-- ANTIFLING
+local function setAntiFling(state)
+    antiFlingEnabled = state
+    antiflingBtn.Text = state and "Disable AntiFling" or "Enable AntiFling"
+    antiflingBtn.BackgroundColor3 = state and Color3.fromRGB(60, 210, 255) or Color3.fromRGB(255, 120, 40)
+end
+
+antiflingBtn.MouseButton1Click:Connect(function()
+    setAntiFling(not antiFlingEnabled)
+end)
+
+-- CLOSE GUI
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui.Enabled = false
+end)
+
+-- HOTKEYS
+local UIS = game:GetService("UserInputService")
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.K then
+        saveBtn:Activate()
+    elseif input.KeyCode == Enum.KeyCode.L then
+        -- วาร์ปไปจุดเซฟ
+        local char = player.Character
+        if teleportPosition and char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
+            sound.Parent = char.HumanoidRootPart
+            sound:Play()
+        end
+    elseif input.KeyCode == Enum.KeyCode.T then
+        -- วาร์ปไป Spawn Point
+        local char = player.Character
+        if spawnPosition and char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(spawnPosition)
+            sound.Parent = char.HumanoidRootPart
+            sound:Play()
+        end
+    elseif input.KeyCode == Enum.KeyCode.F1 then
+        screenGui.Enabled = not screenGui.Enabled
+    end
+end)
+
+-- AUTO TELEPORT LOOP (วาร์ปรัวๆ เมื่อ HP < 10%)
 local function startTeleportSpam(humanoid)
     teleporting = true
     while teleporting and teleportPosition and humanoid.Health > 0 and (humanoid.Health / humanoid.MaxHealth) <= 0.1 do
@@ -121,34 +294,50 @@ end
 local function setupAutoTeleport(humanoid)
     humanoid.HealthChanged:Connect(function(health)
         if teleportPosition and health > 0 and (health / humanoid.MaxHealth) <= 0.1 and not teleporting and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-            -- เริ่มวาร์ปรัวๆ
             startTeleportSpam(humanoid)
         elseif teleporting and ((health / humanoid.MaxHealth) > 0.1 or health <= 0 or not teleportPosition) then
-            -- เลิกวาร์ป ถ้า HP กลับมาปกติหรือไม่มีจุดเซฟ
             teleporting = false
         end
     end)
 end
 
-player.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid")
-    setupAutoTeleport(hum)
-    if sound.Parent ~= nil then
-        sound.Parent = nil
+-- ANTI-VOID ระบบกันตกแมพ
+spawn(function()
+    while true do
+        task.wait(0.2)
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+            local y = char.HumanoidRootPart.Position.Y
+            local hum = char.Humanoid
+            if y < SAFE_Y and hum.Health > 0 then
+                if teleportPosition then
+                    char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
+                elseif spawnPosition then
+                    char.HumanoidRootPart.CFrame = CFrame.new(spawnPosition)
+                else
+                    char.HumanoidRootPart.CFrame = CFrame.new(RESPAWN_POSITION)
+                end
+                sound.Parent = char.HumanoidRootPart
+                sound:Play()
+            end
+            -- AntiFling: reset extreme velocity/rotation
+            if antiFlingEnabled then
+                local hrp = char.HumanoidRootPart
+                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
+                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
     end
 end)
 
-if player.Character and player.Character:FindFirstChild("Humanoid") then
-    setupAutoTeleport(player.Character.Humanoid)
-end
-
-updateInfo()
-
--- ระบบกันเตะ AFK (Anti-AFK) - ขยับทุก 5 นาที
+-- ANTI-AFK
 spawn(function()
     while true do
-        task.wait(300) -- 5 นาที
-        -- ส่ง event ขยับเมาส์/กระโดด
+        task.wait(300)
         local VirtualUser = game:GetService("VirtualUser")
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new(0,0))
@@ -158,3 +347,43 @@ spawn(function()
         end
     end
 end)
+
+-- CUSTOM RESPAWN (กัน spawn ใต้แมพ & ไปจุด spawn ที่ตั้งเอง)
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    setupAutoTeleport(hum)
+    if sound.Parent ~= nil then
+        sound.Parent = nil
+    end
+
+    -- กัน spawn ใต้แมพ
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    task.wait(0.1)
+    if hrp.Position.Y < SAFE_Y then
+        if spawnPosition then
+            hrp.CFrame = CFrame.new(spawnPosition)
+        else
+            hrp.CFrame = CFrame.new(RESPAWN_POSITION)
+        end
+    end
+
+    -- กันตายเด้ง Lobby: รีเซ็ตตำแหน่งก่อน Destroy
+    hum.Died:Connect(function()
+        if hrp then
+            if spawnPosition then
+                hrp.CFrame = CFrame.new(spawnPosition)
+            else
+                hrp.CFrame = CFrame.new(RESPAWN_POSITION)
+            end
+        end
+    end)
+end)
+
+-- INIT
+if player.Character and player.Character:FindFirstChild("Humanoid") then
+    setupAutoTeleport(player.Character.Humanoid)
+end
+
+updateSaveInfo()
+updateSpawnInfo()
+setAntiFling(false)
