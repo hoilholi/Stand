@@ -1,11 +1,13 @@
--- Ultimate Utility GUI: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิดปิด), AutoClicker (เลือกพิกัด, ปุ่มเปิดปิด, ปรับดีเลย์), Drag GUI
+-- Ultimate Utility GUI (รวม AutoClicker ใช้ Python script ClickerBot.py)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิดปิด), AutoClicker (เลือกพิกัด, ปุ่มเปิดปิด, ปรับดีเลย์, เรียก Python)
+-- หมายเหตุ: ส่วน AutoClicker จะเรียก Python script ผ่าน os.execute หรือ io.popen (เฉพาะ Windows/Executor ที่รองรับ)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
---------------------- Main Utility Frame ---------------------
+-- Main Utility Frame
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 390, 0, 340)
 frame.Position = UDim2.new(0, 40, 0, 110)
@@ -13,7 +15,7 @@ frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
 
--- Title bar Main
+-- Title bar
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 36)
 title.Position = UDim2.new(0, 0, 0, 0)
@@ -23,7 +25,7 @@ title.TextSize = 20
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 235, 110)
 
--- DRAGGABLE GUI
+-- Drag GUI
 local UserInputService = game:GetService("UserInputService")
 local function makeDraggable(target, ybar)
     local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
@@ -287,7 +289,7 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 4. DiedTP (ไวและปุ่มกด)
+-- 4. DiedTP
 local deathPos = nil
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
@@ -334,11 +336,11 @@ antiidleBtn.MouseButton1Click:Connect(function()
     setAntiIdle(not antiidleEnabled)
 end)
 
--- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด + ปรับดีเลย์)
+-- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด + ปรับดีเลย์/เรียก Python)
 local autoclickerEnabled = false
 local autoclickerPos = nil
-local autoclickerConn = nil
 local clickInterval = tonumber(delayBox.Text) or 0.25
+local autoclickerProc = nil
 
 local function updateAutoClickerStatus()
     autoclickerStartBtn.Text = "AutoClick: " .. (autoclickerEnabled and "เปิด" or "ปิด")
@@ -350,9 +352,12 @@ autoclickerPickBtn.MouseButton1Click:Connect(function()
     coordLabel.Visible = true
     autoclickerPickBtn.Text = "เลือกพิกัด..."
     autoclickerStartBtn.Text = "AutoClick: ปิด"
-    autoclickerCircle.BackgroundColor3 = statusColors.off
     autoclickerEnabled = false
-    if autoclickerConn then pcall(function() autoclickerConn:Disconnect() end) end
+    if autoclickerProc then
+        -- ปิดโปรเซส python ถ้ามี
+        pcall(function() autoclickerProc:Close() end)
+        autoclickerProc = nil
+    end
     local pickConn, escConn
     pickConn = UserInputService.InputBegan:Connect(function(input, gp)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -373,44 +378,51 @@ autoclickerPickBtn.MouseButton1Click:Connect(function()
     escConn = pickConn
 end)
 
-local function startAutoClicker()
-    if autoclickerEnabled or not autoclickerPos then return end
-    autoclickerEnabled = true
-    updateAutoClickerStatus()
-    -- ใน Roblox เอง simulate mouse click นอก client ไม่ได้ ต้องใช้ executor ที่รองรับ firemouseclick
-    autoclickerConn = game:GetService("RunService").RenderStepped:Connect(function()
-        if autoclickerEnabled and autoclickerPos then
-            -- firemouseclick(0, autoclickerPos.X, autoclickerPos.Y) -- สำหรับ executor ที่รองรับ
-            -- หรือแค่แสดงตำแหน่ง
-        end
-    end)
-    -- ทำ loop จริงแบบ interval
-    spawn(function()
-        while autoclickerEnabled and autoclickerPos do
-            -- firemouseclick(0, autoclickerPos.X, autoclickerPos.Y)
-            wait(clickInterval)
-        end
-    end)
-end
+delayBox.FocusLost:Connect(function()
+    clickInterval = tonumber(delayBox.Text) or 0.25
+end)
 
 local function stopAutoClicker()
     autoclickerEnabled = false
     updateAutoClickerStatus()
-    if autoclickerConn then
-        pcall(function() autoclickerConn:Disconnect() end)
-        autoclickerConn = nil
+    if autoclickerProc then
+        pcall(function() autoclickerProc:Close() end)
+        autoclickerProc = nil
     end
+end
+
+local function startAutoClicker()
+    if autoclickerEnabled or not autoclickerPos then return end
+    autoclickerEnabled = true
+    clickInterval = tonumber(delayBox.Text) or 0.25
+    updateAutoClickerStatus()
+    -- เรียก Python AutoClicker (ต้องวาง ClickerBot.py ไว้และติดตั้ง pyautogui)
+    -- ตัวอย่าง: python ClickerBot.py <clicks> <delay> <x> <y>
+    -- แนะนำให้แก้ Python script ให้รับ argument x, y, delay, clicks
+    local x, y = math.floor(autoclickerPos.X), math.floor(autoclickerPos.Y)
+    local delay = tostring(clickInterval)
+    local clicks = 99999999 -- "infinite" (หรือจะใส่จำนวนจริงก็ได้)
+    -- *** อันนี้เฉพาะ executor ที่รัน os.execute/io.popen ได้ ***
+    local cmd = string.format('start "" python ClickerBot.py %d %s %d %d', clicks, delay, x, y)
+    -- ลองใช้ os.execute, หรือ io.popen ถ้า executor รองรับ
+    pcall(function()
+        autoclickerProc = io.popen and io.popen(cmd) or os.execute(cmd)
+    end)
 end
 
 autoclickerStartBtn.MouseButton1Click:Connect(function()
     if not autoclickerEnabled and autoclickerPos then
-        clickInterval = tonumber(delayBox.Text) or 0.25
         startAutoClicker()
     else
         stopAutoClicker()
     end
 end)
 
-delayBox.FocusLost:Connect(function()
-    clickInterval = tonumber(delayBox.Text) or 0.25
-end)
+-- หมายเหตุสำคัญ:
+-- - ต้องมี Python + pyautogui + ClickerBot.py ปรับให้รับ argument (ดูด้านล่าง)
+-- - ถ้า executor ไม่รองรับ os.execute/io.popen จะไม่สามารถรัน Python ได้
+-- - สำหรับ Roblox Studio จะไม่มีผลลัพธ์จริง
+
+-- ตัวอย่างการปรับ ClickerBot.py ให้รองรับ argument (วางในโฟลเดอร์เดียวกับ .py):
+-- main(clicks=..., delay=..., click_or_press='c', x=..., y=...)
+-- และใน click() ให้ pyautogui.click(x, y)
