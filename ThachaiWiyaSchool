@@ -1,63 +1,293 @@
--- Ultimate Utility GUI (Minimal) + Infinite Yield Style Autoclick (autoclick/unautoclick/noautoclick command)
--- ไม่มีปุ่ม Screen Tap, ไม่มีระบบแตะจอ, มีเฉพาะระบบ Autoclick แบบ Infinite Yield (พิมพ์สั่งงานในช่อง CommandBar)
+-- Ultimate Utility GUI + Infinite Yield Style Autoclick + AntiIdle กันหลุดเมื่ออยู่นิ่ง (20 นาที)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (กันหลุด 20 นาที), Autoclick Command (autoclick/unautoclick/noautoclick)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
---------------------- Minimal GUI (CommandBar) ---------------------
+--------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 360, 0, 80)
-frame.Position = UDim2.new(0, 35, 0, 25)
-frame.BackgroundColor3 = Color3.fromRGB(30, 32, 38)
+frame.Size = UDim2.new(0, 390, 0, 430)
+frame.Position = UDim2.new(0, 40, 0, 110)
+frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 26)
+title.Size = UDim2.new(1, 0, 0, 36)
 title.Position = UDim2.new(0, 0, 0, 0)
-title.Text = "Ultimate Utility GUI - Autoclick"
+title.Text = "Ultimate Utility GUI"
 title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+title.TextSize = 20
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 235, 110)
 
+-- Drag GUI
+local UserInputService = game:GetService("UserInputService")
+local function makeDraggable(target, ybar)
+    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
+    target.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.Y - target.AbsolutePosition.Y < ybar then
+            dragging = true
+            dragStart = input.Position
+            startPos = target.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    target.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+makeDraggable(frame, 36)
+
+local y0 = 36
+local rowH = 32
+local leftX = 10
+local function makeStatusCircle(parent, color, y)
+    local cir = Instance.new("Frame", parent)
+    cir.Size = UDim2.new(0, 18, 0, 18)
+    cir.Position = UDim2.new(0, leftX, 0, y+7)
+    cir.BackgroundColor3 = color
+    cir.BorderSizePixel = 0
+    cir.Name = "StatusCircle"
+    local uicorner = Instance.new("UICorner", cir)
+    uicorner.CornerRadius = UDim.new(1,0)
+    return cir
+end
+local statusColors = {
+    on = Color3.fromRGB(80,210,80),
+    off = Color3.fromRGB(210,50,50)
+}
+local darkbtn = Color3.fromRGB(47,52,65)
+local bluebtn = Color3.fromRGB(66,117,143)
+
+-- 1. AntiFling
+local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
+local antiflingBtn = Instance.new("TextButton", frame)
+antiflingBtn.Size = UDim2.new(0, 210, 0, 28)
+antiflingBtn.Position = UDim2.new(0, leftX+28, 0, y0+4)
+antiflingBtn.Text = "AntiFling : ปิด"
+antiflingBtn.Font = Enum.Font.GothamBold
+antiflingBtn.TextSize = 16
+antiflingBtn.BackgroundColor3 = darkbtn
+antiflingBtn.TextColor3 = Color3.new(1,1,1)
+antiflingBtn.BorderSizePixel = 0
+
+-- 2. AutoTP
+local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
+local autotpswitch = Instance.new("TextButton", frame)
+autotpswitch.Size = UDim2.new(0, 210, 0, 28)
+autotpswitch.Position = UDim2.new(0, leftX+28, 0, y0+rowH+4)
+autotpswitch.Text = "AutoTP : ปิด"
+autotpswitch.Font = Enum.Font.GothamBold
+autotpswitch.TextSize = 16
+autotpswitch.BackgroundColor3 = darkbtn
+autotpswitch.TextColor3 = Color3.new(1,1,1)
+autotpswitch.BorderSizePixel = 0
+local autosetBtn = Instance.new("TextButton", frame)
+autosetBtn.Size = UDim2.new(0, 110, 0, 28)
+autosetBtn.Position = UDim2.new(0, 260, 0, y0+rowH+4)
+autosetBtn.Text = "Set AutoTP"
+autosetBtn.Font = Enum.Font.GothamBold
+autosetBtn.TextSize = 14
+autosetBtn.BackgroundColor3 = bluebtn
+autosetBtn.TextColor3 = Color3.new(1,1,1)
+autosetBtn.BorderSizePixel = 0
+
+-- 3. Set Spawn
+local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
+local spawnBtn = Instance.new("TextButton", frame)
+spawnBtn.Size = UDim2.new(0, 210, 0, 28)
+spawnBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*2+4)
+spawnBtn.Text = "Set Spawn"
+spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 16
+spawnBtn.BackgroundColor3 = darkbtn
+spawnBtn.TextColor3 = Color3.new(1,1,1)
+spawnBtn.BorderSizePixel = 0
+
+-- 4. DiedTP
+local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 210, 0, 28)
+diedtpBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*3+4)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 16
+diedtpBtn.BackgroundColor3 = darkbtn
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
+diedtpBtn.BorderSizePixel = 0
+
+-- 5. Antiidle
+local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
+local antiidleBtn = Instance.new("TextButton", frame)
+antiidleBtn.Size = UDim2.new(0, 210, 0, 28)
+antiidleBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*4+4)
+antiidleBtn.Text = "Antiidle (Off)"
+antiidleBtn.Font = Enum.Font.GothamBold
+antiidleBtn.TextSize = 16
+antiidleBtn.BackgroundColor3 = bluebtn
+antiidleBtn.TextColor3 = Color3.new(1,1,1)
+antiidleBtn.BorderSizePixel = 0
+
+-- 6. Autoclick Command Bar (Infinite Yield style)
 local autoclickLabel = Instance.new("TextLabel", frame)
-autoclickLabel.Size = UDim2.new(1, -20, 0, 18)
-autoclickLabel.Position = UDim2.new(0, 10, 0, 28)
+autoclickLabel.Size = UDim2.new(0, 370, 0, 24)
+autoclickLabel.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+8)
 autoclickLabel.BackgroundTransparency = 1
 autoclickLabel.Font = Enum.Font.Gotham
-autoclickLabel.TextSize = 13
-autoclickLabel.TextColor3 = Color3.fromRGB(160, 255, 200)
+autoclickLabel.TextSize = 14
+autoclickLabel.TextColor3 = Color3.fromRGB(255, 235, 110)
 autoclickLabel.Text = "autoclick [click delay] [release delay] | unautoclick/noautoclick"
 autoclickLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local autoclickBar = Instance.new("TextBox", frame)
-autoclickBar.Size = UDim2.new(1, -20, 0, 26)
-autoclickBar.Position = UDim2.new(0, 10, 0, 48)
+autoclickBar.Size = UDim2.new(0, 320, 0, 28)
+autoclickBar.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+34)
 autoclickBar.Font = Enum.Font.Gotham
 autoclickBar.TextSize = 15
 autoclickBar.TextColor3 = Color3.fromRGB(200, 255, 200)
-autoclickBar.PlaceholderText = "autoclick 0.1 0.1  หรือ unautoclick"
+autoclickBar.PlaceholderText = "พิมพ์คำสั่ง autoclick 0.1 0.1 หรือ unautoclick"
 autoclickBar.ClearTextOnFocus = false
 autoclickBar.BackgroundColor3 = Color3.fromRGB(47,52,65)
 autoclickBar.Text = ""
 autoclickBar.BorderSizePixel = 0
 
 local autoclickStatus = Instance.new("TextLabel", frame)
-autoclickStatus.Size = UDim2.new(1, -20, 0, 18)
-autoclickStatus.Position = UDim2.new(0, 10, 0, 74)
+autoclickStatus.Size = UDim2.new(0, 320, 0, 18)
+autoclickStatus.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+64)
 autoclickStatus.Font = Enum.Font.Gotham
 autoclickStatus.TextSize = 13
 autoclickStatus.TextColor3 = Color3.fromRGB(200, 255, 200)
 autoclickStatus.BackgroundTransparency = 1
 autoclickStatus.Text = ""
 
--------------------- Infinite Yield Style Autoclick Command ------------------
+-------------------- LOGIC (Utility) ------------------
 
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+-- 1. AntiFling
+local antiflingEnabled = false
+local function setAntiFling(state)
+    antiflingEnabled = state
+    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
+    antiflingCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+end
+antiflingBtn.MouseButton1Click:Connect(function() setAntiFling(not antiflingEnabled) end)
+spawn(function()
+    while true do
+        task.wait(0.2)
+        if antiflingEnabled then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
+                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+    end
+end)
 
+-- 2. AutoTP
+local autotpenabled = false
+local teleporting = false
+local autotpPos
+local autoTP_HUMANOID = nil
+local function setAutoTP(state)
+    autotpenabled = state
+    autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
+    autotpcircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+end
+autotpswitch.MouseButton1Click:Connect(function() setAutoTP(not autotpenabled) end)
+autosetBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        autotpPos = char.HumanoidRootPart.Position
+    end
+end)
+
+-- 3. Set Spawn
+local spawnPos
+spawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPos = char.HumanoidRootPart.Position
+        spawnCircle.BackgroundColor3 = statusColors.on
+    end
+end)
+player.CharacterAdded:Connect(function(char)
+    if spawnPos then
+        local hrp = char:WaitForChild("HumanoidRootPart", 3)
+        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
+    end
+    if autoTP_HUMANOID then pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end) end
+    autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
+    if autoTP_HUMANOID then
+        autoTP_HUMANOID.HealthChanged:Connect(function(health)
+            if autotpenabled and autotpPos and health > 0 and (health / autoTP_HUMANOID.MaxHealth) <= 0.1 and not teleporting and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead then
+                teleporting = true
+                local c = player.Character
+                if c and c:FindFirstChild("HumanoidRootPart") then c.HumanoidRootPart.CFrame = CFrame.new(autotpPos) end
+                wait(0.5)
+                teleporting = false
+            end
+        end)
+    end
+end)
+
+-- 4. DiedTP
+local deathPos = nil
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    local diedFlag = false
+    hum.Died:Connect(function() diedFlag = true end)
+    game:GetService("RunService").Stepped:Connect(function()
+        if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
+            deathPos = char.HumanoidRootPart.Position
+            diedtpCircle.BackgroundColor3 = statusColors.on
+            diedFlag = false
+        end
+    end)
+end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
+    end
+end)
+
+-- 5. AntiIdle (กันหลุดเว้นวรรค 20 นาที)
+local antiidleEnabled = false
+local antiidleConn = nil
+local function setAntiIdle(state)
+    antiidleEnabled = state
+    antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
+    antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+    if antiidleConn then pcall(function() antiidleConn:Disconnect() end) antiidleConn = nil end
+    if state then
+        local vu = game:GetService("VirtualUser")
+        antiidleConn = player.Idled:Connect(function()
+            -- Roblox จะตัดออกเมื่อไม่ขยับ ~20 นาที
+            -- ฟังก์ชันนี้จะ simulate ขยับเมาส์ทุกครั้งที่ถูก Roblox แจ้งว่านิ่งนาน
+            vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+            wait(1)
+            vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        end)
+    end
+end
+antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
+
+-- 6. Autoclick (Infinite Yield style logic)
 local autoclick_enabled = false
 local autoclick_conn = nil
 
@@ -66,9 +296,9 @@ local function start_autoclick(click_delay, release_delay)
     autoclick_enabled = true
     autoclickStatus.Text = string.format("AutoClick ON | click: %.2fs | release: %.2fs", click_delay, release_delay)
 
-    autoclick_conn = RunService.RenderStepped:Connect(function()
+    autoclick_conn = game:GetService("RunService").RenderStepped:Connect(function()
         if not autoclick_enabled then return end
-        -- สำหรับ executor ที่รองรับ mouse1press/mouse1release ให้เปิดคอมเมนต์ 2 บรรทัดล่างนี้
+        -- ถ้า executor รองรับ mouse1press/mouse1release ให้ใช้แทน code นี้
         -- mouse1press()
         -- wait(click_delay)
         -- mouse1release()
@@ -113,8 +343,9 @@ end)
 
 -------------------- End of Script --------------------
 
--- วิธีใช้:
--- 1. ดูที่ GUI จะมีช่องพิมพ์ autoclick 0.1 0.1 แล้ว Enter เพื่อเริ่มออโต้คลิก
+-- วิธีใช้: 
+-- 1. ดูที่ GUI จะมีช่อง autoclick พิมพ์ autoclick 0.1 0.1 แล้ว Enter เพื่อเริ่มออโต้คลิก
 -- 2. พิมพ์ unautoclick หรือ noautoclick เพื่อหยุด
--- 3. ไม่มีปุ่ม/GUI Screen Tap
--- หมายเหตุ: ถ้า executor รองรับ mouse1press()/mouse1release() ให้เปิดคอมเมนต์ใน start_autoclick() จะคลิกได้จริงทุกเกม
+-- 3. ฟีเจอร์อื่นใช้งานได้ตามปกติ (AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle)
+-- 4. AntiIdle จะกันหลุด Roblox เมื่ออยู่นิ่ง 20 นาที (ต้องเปิดปุ่มนี้)
+-- หมายเหตุ: ถ้า executor รองรับ mouse1press()/mouse1release() ให้ใช้แทนในฟังก์ชัน start_autoclick() จะได้ผลชัวร์กับทุกเกม
