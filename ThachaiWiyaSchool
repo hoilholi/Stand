@@ -1,667 +1,209 @@
--- Ultimate Teleport System: Rainbow Theme, All-in-One (Save/Spawn/Respawn/DeathTP/Freecam/CustomHotkey/Invisible/HideHitbox)
--- วางใน LocalScript (StarterPlayerScripts) หรือ Executor
--- ฟีเจอร์: Save Point, Spawn Point, Respawn Point, Death TP, Freecam+Speed+CustomHotkey, Invisible, HideHitbox, AntiFling, Anti-AFK, Custom Theme (เปลี่ยนสี GUI ได้)
+-- วางใน LocalScript (StarterPlayerScripts)
+-- ฟีเจอร์: AntiFling, Freecam (ปรับสปีด + เมาส์หันกล้อง), Set Spawn, DiedTP + GUI แสดงสถานะ
 
 local player = game.Players.LocalPlayer
-local teleportPosition, teleportName = nil, ""
-local spawnPosition, spawnName = nil, ""
-local respawnPosition, respawnName = nil, ""
-local deathPosition = nil
-local teleporting, antiFlingEnabled = false, false
-local isInvisible, isHitboxHidden = false, false
-local savedTransparency, savedCanCollide = {}, {}
-local themeIndex = 1
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "UltimateUtilityGUI"
+gui.ResetOnSpawn = false
 
-local SAFE_Y = -30
-local DEFAULT_SPAWN = Vector3.new(0, 10, 0)
-
--- Rainbow Theme List (light/dark/soft)
-local themeList = {
-    -- {BG, Section, Btn, BtnText, Label, Input, Accent}
-    { -- Soft blue
-        BG = Color3.fromRGB(24,27,38),
-        Section = Color3.fromRGB(125,170,255),
-        Btn = Color3.fromRGB(64, 190, 255),
-        BtnText = Color3.new(.1,.1,.2),
-        Label = Color3.fromRGB(200,220,255),
-        Input = Color3.fromRGB(36,38,49),
-        Accent = Color3.fromRGB(120,140,200)
-    },
-    { -- Soft green
-        BG = Color3.fromRGB(27,32,24),
-        Section = Color3.fromRGB(120,255,160),
-        Btn = Color3.fromRGB(100, 255, 150),
-        BtnText = Color3.new(.1,.2,.1),
-        Label = Color3.fromRGB(185,255,210),
-        Input = Color3.fromRGB(39,49,36),
-        Accent = Color3.fromRGB(140,200,160)
-    },
-    { -- Soft pink
-        BG = Color3.fromRGB(32,26,36),
-        Section = Color3.fromRGB(255,170,220),
-        Btn = Color3.fromRGB(255, 140, 215),
-        BtnText = Color3.new(.2,.1,.18),
-        Label = Color3.fromRGB(255,210,245),
-        Input = Color3.fromRGB(49,36,44),
-        Accent = Color3.fromRGB(200,120,180)
-    },
-    { -- Sunset
-        BG = Color3.fromRGB(36,29,24),
-        Section = Color3.fromRGB(255,191,64),
-        Btn = Color3.fromRGB(255, 191, 128),
-        BtnText = Color3.new(.2,.14,0),
-        Label = Color3.fromRGB(255,230,180),
-        Input = Color3.fromRGB(49,41,36),
-        Accent = Color3.fromRGB(200,170,120)
-    },
-    { -- Original night
-        BG = Color3.fromRGB(22,24,34),
-        Section = Color3.fromRGB(255,221,77),
-        Btn = Color3.fromRGB(64,190,64),
-        BtnText = Color3.fromRGB(1,1,1),
-        Label = Color3.fromRGB(200,200,180),
-        Input = Color3.fromRGB(40,40,46),
-        Accent = Color3.fromRGB(120,120,120)
-    },
-}
-
------------------------- GUI SETUP ------------------------
-local gui, frame = Instance.new("ScreenGui"), Instance.new("Frame")
-gui.Name, gui.ResetOnSpawn = "UltimateTeleportGUI", false
-gui.Parent = player:WaitForChild("PlayerGui")
-frame.Name, frame.Parent = "MainFrame", gui
-frame.Size = UDim2.new(0, 480, 0, 710)
-frame.Position = UDim2.new(0, 40, 0, 40)
-frame.BackgroundTransparency = 0.06
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 340, 0, 254)
+frame.Position = UDim2.new(0, 40, 0, 110)
+frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
+frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
 
-local function applyTheme(idx)
-    local th = themeList[idx]
-    frame.BackgroundColor3 = th.BG
-    for _,obj in ipairs(frame:GetDescendants()) do
-        if obj:IsA("TextLabel") then
-            if obj.Name:find("Section") then
-                obj.TextColor3 = th.Section
-            else
-                obj.TextColor3 = th.Label
-            end
-            obj.BackgroundTransparency = 1
-        elseif obj:IsA("TextButton") then
-            if obj.Name:find("Accent") then
-                obj.BackgroundColor3 = th.Accent
-                obj.TextColor3 = th.BtnText
-            else
-                obj.BackgroundColor3 = th.Btn
-                obj.TextColor3 = th.BtnText
-            end
-        elseif obj:IsA("TextBox") then
-            obj.BackgroundColor3 = th.Input
-            obj.TextColor3 = th.Label
-        end
-    end
-end
-
-local function sectionHeader(parent, text, color, yPos)
-    local l = Instance.new("TextLabel", parent)
-    l.Name = "SectionHeader"
-    l.Size = UDim2.new(1, -20, 0, 24)
-    l.Position = UDim2.new(0, 10, 0, yPos)
-    l.Text = text
-    l.BackgroundTransparency = 1
-    l.Font = Enum.Font.GothamSemibold
-    l.TextSize = 17
-    l.TextColor3 = color
-    return l
-end
-
-local yPos = 10
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 36)
-title.Position = UDim2.new(0, 0, 0, yPos)
-title.Text = "🌈 Ultimate Teleport & Utility (Rainbow)"
-title.BackgroundTransparency = 1
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Ultimate Utility GUI"
 title.Font = Enum.Font.GothamBold
-title.TextSize = 23
-title.TextColor3 = themeList[themeIndex].Section
-yPos = yPos + 40
+title.TextSize = 20
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 235, 110)
 
---------------------- Section: Teleport Point (Save) ---------------------
-sectionHeader(frame, "จุดวาป (Save Point)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local saveNameBox = Instance.new("TextBox", frame)
-saveNameBox.Size = UDim2.new(0.54, -10, 0, 28)
-saveNameBox.Position = UDim2.new(0, 12, 0, yPos)
-saveNameBox.PlaceholderText = "ชื่อจุดวาป (Home, Boss, ...)"
-saveNameBox.Font = Enum.Font.Gotham
-saveNameBox.TextSize = 13
-saveNameBox.Text = ""
-saveNameBox.ClearTextOnFocus = false
-
-local saveBtn = Instance.new("TextButton", frame)
-saveBtn.Size = UDim2.new(0.17, 0, 0, 28)
-saveBtn.Position = UDim2.new(0.56, 16, 0, yPos)
-saveBtn.Text = "บันทึก"
-saveBtn.Font = Enum.Font.GothamBold
-saveBtn.TextSize = 13
-
-local warpBtn = Instance.new("TextButton", frame)
-warpBtn.Size = UDim2.new(0.17, 0, 0, 28)
-warpBtn.Position = UDim2.new(0.74, 18, 0, yPos)
-warpBtn.Text = "วาร์ป"
-warpBtn.Font = Enum.Font.GothamBold
-warpBtn.TextSize = 13
-
-local clearBtn = Instance.new("TextButton", frame)
-clearBtn.Size = UDim2.new(0.08, 0, 0, 28)
-clearBtn.Position = UDim2.new(0.92, 20, 0, yPos)
-clearBtn.Text = "ลบ"
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.TextSize = 13
-yPos = yPos + 32
-
-local saveInfoLabel = Instance.new("TextLabel", frame)
-saveInfoLabel.Size = UDim2.new(1, -20, 0, 22)
-saveInfoLabel.Position = UDim2.new(0, 12, 0, yPos)
-saveInfoLabel.Text = "ยังไม่มีจุดวาป"
-saveInfoLabel.Font = Enum.Font.Gotham
-saveInfoLabel.TextSize = 13
-saveInfoLabel.BackgroundTransparency = 1
-saveInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-yPos = yPos + 28
-
----------------------- Section: Spawn Point ----------------------
-sectionHeader(frame, "จุดเกิด (Spawn Point)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local spawnNameBox = Instance.new("TextBox", frame)
-spawnNameBox.Size = UDim2.new(0.54, -10, 0, 28)
-spawnNameBox.Position = UDim2.new(0, 12, 0, yPos)
-spawnNameBox.PlaceholderText = "ชื่อจุดเกิด (Safe, Shop, ...)"
-spawnNameBox.Font = Enum.Font.Gotham
-spawnNameBox.TextSize = 13
-spawnNameBox.Text = ""
-spawnNameBox.ClearTextOnFocus = false
-
-local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0.17, 0, 0, 28)
-spawnBtn.Position = UDim2.new(0.56, 16, 0, yPos)
-spawnBtn.Text = "บันทึก"
-spawnBtn.Font = Enum.Font.GothamBold
-spawnBtn.TextSize = 13
-
-local spawnWarpBtn = Instance.new("TextButton", frame)
-spawnWarpBtn.Size = UDim2.new(0.17, 0, 0, 28)
-spawnWarpBtn.Position = UDim2.new(0.74, 18, 0, yPos)
-spawnWarpBtn.Text = "วาร์ป"
-spawnWarpBtn.Font = Enum.Font.GothamBold
-spawnWarpBtn.TextSize = 13
-
-local spawnClearBtn = Instance.new("TextButton", frame)
-spawnClearBtn.Size = UDim2.new(0.08, 0, 0, 28)
-spawnClearBtn.Position = UDim2.new(0.92, 20, 0, yPos)
-spawnClearBtn.Text = "ลบ"
-spawnClearBtn.Font = Enum.Font.GothamBold
-spawnClearBtn.TextSize = 13
-yPos = yPos + 32
-
-local spawnInfoLabel = Instance.new("TextLabel", frame)
-spawnInfoLabel.Size = UDim2.new(1, -20, 0, 22)
-spawnInfoLabel.Position = UDim2.new(0, 12, 0, yPos)
-spawnInfoLabel.Text = "ยังไม่มีจุดเกิด"
-spawnInfoLabel.Font = Enum.Font.Gotham
-spawnInfoLabel.TextSize = 13
-spawnInfoLabel.BackgroundTransparency = 1
-spawnInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-yPos = yPos + 28
-
----------------------- Section: Respawn Point ----------------------
-sectionHeader(frame, "จุดเกิดใหม่ (Respawn Point)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local respawnNameBox = Instance.new("TextBox", frame)
-respawnNameBox.Size = UDim2.new(0.54, -10, 0, 28)
-respawnNameBox.Position = UDim2.new(0, 12, 0, yPos)
-respawnNameBox.PlaceholderText = "ชื่อจุดเกิดใหม่ (Arena, PVP, ...)"
-respawnNameBox.Font = Enum.Font.Gotham
-respawnNameBox.TextSize = 13
-respawnNameBox.Text = ""
-respawnNameBox.ClearTextOnFocus = false
-
-local respawnBtn = Instance.new("TextButton", frame)
-respawnBtn.Size = UDim2.new(0.17, 0, 0, 28)
-respawnBtn.Position = UDim2.new(0.56, 16, 0, yPos)
-respawnBtn.Text = "บันทึก"
-respawnBtn.Font = Enum.Font.GothamBold
-respawnBtn.TextSize = 13
-
-local respawnWarpBtn = Instance.new("TextButton", frame)
-respawnWarpBtn.Size = UDim2.new(0.17, 0, 0, 28)
-respawnWarpBtn.Position = UDim2.new(0.74, 18, 0, yPos)
-respawnWarpBtn.Text = "วาร์ป"
-respawnWarpBtn.Font = Enum.Font.GothamBold
-respawnWarpBtn.TextSize = 13
-
-local respawnClearBtn = Instance.new("TextButton", frame)
-respawnClearBtn.Size = UDim2.new(0.08, 0, 0, 28)
-respawnClearBtn.Position = UDim2.new(0.92, 20, 0, yPos)
-respawnClearBtn.Text = "ลบ"
-respawnClearBtn.Font = Enum.Font.GothamBold
-respawnClearBtn.TextSize = 13
-yPos = yPos + 32
-
-local respawnInfoLabel = Instance.new("TextLabel", frame)
-respawnInfoLabel.Size = UDim2.new(1, -20, 0, 22)
-respawnInfoLabel.Position = UDim2.new(0, 12, 0, yPos)
-respawnInfoLabel.Text = "ยังไม่มีจุดเกิดใหม่"
-respawnInfoLabel.Font = Enum.Font.Gotham
-respawnInfoLabel.TextSize = 13
-respawnInfoLabel.BackgroundTransparency = 1
-respawnInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-yPos = yPos + 28
-
----------------------- Section: Death TP ----------------------
-sectionHeader(frame, "จุดตายล่าสุด (Death TP)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0.25, 0, 0, 28)
-diedtpBtn.Position = UDim2.new(0, 12, 0, yPos)
-diedtpBtn.Text = "วาร์ปไปจุดตาย"
-diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 13
-
-local diedtpInfo = Instance.new("TextLabel", frame)
-diedtpInfo.Size = UDim2.new(0.68, 0, 0, 28)
-diedtpInfo.Position = UDim2.new(0.28, 14, 0, yPos)
-diedtpInfo.Text = "ยังไม่ตาย"
-diedtpInfo.Font = Enum.Font.Gotham
-diedtpInfo.TextSize = 13
-diedtpInfo.BackgroundTransparency = 1
-diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
-yPos = yPos + 34
-
----------------------- Section: Freecam ----------------------
-sectionHeader(frame, "Freecam (กล้องบิน)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local freecamBtn = Instance.new("TextButton", frame)
-freecamBtn.Size = UDim2.new(0.26, -4, 0, 28)
-freecamBtn.Position = UDim2.new(0, 12, 0, yPos)
-freecamBtn.Text = "Freecam"
-freecamBtn.Font = Enum.Font.GothamBold
-freecamBtn.TextSize = 13
-
-local freecamSpeedBox = Instance.new("TextBox", frame)
-freecamSpeedBox.Size = UDim2.new(0.14, -4, 0, 28)
-freecamSpeedBox.Position = UDim2.new(0.28, 14, 0, yPos)
-freecamSpeedBox.PlaceholderText = "Speed"
-freecamSpeedBox.Text = "2"
-freecamSpeedBox.Font = Enum.Font.Gotham
-freecamSpeedBox.TextSize = 13
-freecamSpeedBox.ClearTextOnFocus = false
-
-local themeBtn = Instance.new("TextButton", frame)
-themeBtn.Size = UDim2.new(0.28, 0, 0, 28)
-themeBtn.Position = UDim2.new(0.44, 16, 0, yPos)
-themeBtn.Name = "AccentThemeBtn"
-themeBtn.Text = "เปลี่ยนสีธีม"
-themeBtn.Font = Enum.Font.GothamBold
-themeBtn.TextSize = 13
-
-local freecamTip = Instance.new("TextLabel", frame)
-freecamTip.Size = UDim2.new(0.22, 0, 0, 28)
-freecamTip.Position = UDim2.new(0.74, 18, 0, yPos)
-freecamTip.Text = "WASD/Space/Shift\nScroll = Speed"
-freecamTip.Font = Enum.Font.Gotham
-freecamTip.TextSize = 12
-freecamTip.BackgroundTransparency = 1
-yPos = yPos + 36
-
----------------------- Section: Invisible & HideHitbox ----------------------
-sectionHeader(frame, "ล่องหน & ซ่อน Hitbox", themeList[themeIndex].Section, yPos)
-yPos = yPos + 26
-local invisBtn = Instance.new("TextButton", frame)
-invisBtn.Size = UDim2.new(0.28, -8, 0, 28)
-invisBtn.Position = UDim2.new(0, 14, 0, yPos)
-invisBtn.Text = "ล่องหน"
-invisBtn.Font = Enum.Font.GothamBold
-invisBtn.TextSize = 13
-invisBtn.Name = "AccentInvisBtn"
-
-local hitboxBtn = Instance.new("TextButton", frame)
-hitboxBtn.Size = UDim2.new(0.28, -8, 0, 28)
-hitboxBtn.Position = UDim2.new(0.3, 16, 0, yPos)
-hitboxBtn.Text = "ซ่อน Hitbox"
-hitboxBtn.Font = Enum.Font.GothamBold
-hitboxBtn.TextSize = 13
-hitboxBtn.Name = "AccentHitboxBtn"
-yPos = yPos + 36
-
----------------------- Section: Hotkey Setting ----------------------
-sectionHeader(frame, "ตั้งค่าปุ่มลัด (Custom Hotkey)", themeList[themeIndex].Section, yPos)
-yPos = yPos + 24
-local hotkeyLabels, hotkeyBtns = {}, {}
-local hkList = {
-    {name="Save Point", field="save"},
-    {name="Warp to Save Point", field="warp"},
-    {name="Warp to Spawn", field="spawn"},
-    {name="Warp to Respawn", field="respawn"},
-    {name="Warp to Death", field="diedtp"},
-    {name="Freecam", field="freecam"},
-    {name="Toggle GUI", field="togglegui"},
-    {name="Invisible", field="invisible"},
-    {name="HideHitbox", field="hidehitbox"},
-}
-local defaultHotkeys = {
-    save = Enum.KeyCode.K,
-    warp = Enum.KeyCode.L,
-    spawn = Enum.KeyCode.T,
-    respawn = Enum.KeyCode.Y,
-    diedtp = Enum.KeyCode.G,
-    freecam = Enum.KeyCode.F,
-    togglegui = Enum.KeyCode.F1,
-    invisible = Enum.KeyCode.I,
-    hidehitbox = Enum.KeyCode.H,
-}
-local hotkeys = {}
-for k,v in pairs(defaultHotkeys) do hotkeys[k]=v end
-for i, hk in ipairs(hkList) do
-    local y = yPos + (i-1)*28
-    local l = Instance.new("TextLabel", frame)
-    l.Size = UDim2.new(0.44, -10, 0, 24)
-    l.Position = UDim2.new(0, 12, 0, y)
-    l.BackgroundTransparency = 1
-    l.Text = hk.name
-    l.Font = Enum.Font.Gotham
-    l.TextSize = 12
-    l.TextColor3 = themeList[themeIndex].Label
-    hotkeyLabels[hk.field] = l
-
-    local b = Instance.new("TextButton", frame)
-    b.Size = UDim2.new(0.22, 0, 0, 24)
-    b.Position = UDim2.new(0.46, 12, 0, y)
-    b.Text = hotkeys[hk.field].Name
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 12
-    b.Name = "AccentHotkeyBtn"
-    b.AutoButtonColor = true
-    hotkeyBtns[hk.field] = b
-
-    b.MouseButton1Click:Connect(function()
-        b.Text = "Press Key..."
-        local UIS = game:GetService("UserInputService")
-        local con
-        con = UIS.InputBegan:Connect(function(input, gp)
-            if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
-                hotkeys[hk.field] = input.KeyCode
-                b.Text = input.KeyCode.Name
-                con:Disconnect()
-            end
-        end)
-    end)
+-- Helper: วาดสถานะเป็นวงกลมสี (เขียว/แดง/เหลือง)
+local function makeStatusCircle(parent, color, y)
+    local cir = Instance.new("Frame", parent)
+    cir.Size = UDim2.new(0, 16, 0, 16)
+    cir.Position = UDim2.new(0, 10, 0, y)
+    cir.BackgroundColor3 = color
+    cir.BorderSizePixel = 0
+    cir.Name = "StatusCircle"
+    local uicorner = Instance.new("UICorner", cir)
+    uicorner.CornerRadius = UDim.new(1,0)
+    return cir
 end
-yPos = yPos + #hkList * 28 + 8
 
----------------------- Section: Extra / Utility ----------------------
-sectionHeader(frame, "ระบบเสริม", themeList[themeIndex].Section, yPos)
-yPos = yPos + 24
+local y = 44
+
+-- 1. AntiFling
+local antiflingCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
 local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0.42, -10, 0, 32)
-antiflingBtn.Position = UDim2.new(0, 12, 0, yPos)
-antiflingBtn.Text = "เปิด AntiFling"
+antiflingBtn.Size = UDim2.new(0, 120, 0, 24)
+antiflingBtn.Position = UDim2.new(0, 32, 0, y)
+antiflingBtn.Text = "AntiFling : ปิด"
 antiflingBtn.Font = Enum.Font.GothamBold
 antiflingBtn.TextSize = 14
-antiflingBtn.Name = "AccentAntiflingBtn"
+antiflingBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+antiflingBtn.TextColor3 = Color3.new(1,1,1)
 
-local closeBtn = Instance.new("TextButton", frame)
-closeBtn.Size = UDim2.new(0.42, -10, 0, 32)
-closeBtn.Position = UDim2.new(0.5, 14, 0, yPos)
-closeBtn.Text = "ปิด GUI"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 14
-closeBtn.Name = "AccentCloseBtn"
-yPos = yPos + 40
+-- 2. Freecam
+y = y + 38
+local freecamCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local freecamBtn = Instance.new("TextButton", frame)
+freecamBtn.Size = UDim2.new(0, 120, 0, 24)
+freecamBtn.Position = UDim2.new(0, 32, 0, y)
+freecamBtn.Text = "Freecam : ปิด"
+freecamBtn.Font = Enum.Font.GothamBold
+freecamBtn.TextSize = 14
+freecamBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+freecamBtn.TextColor3 = Color3.new(1,1,1)
 
----------------------- Section: Tips ----------------------
-local tipLabel = Instance.new("TextLabel", frame)
-tipLabel.Size = UDim2.new(1, -20, 0, 38)
-tipLabel.Position = UDim2.new(0, 12, 0, yPos)
-tipLabel.Text = "Tips: ใช้ปุ่มลัดที่ตั้งไว้, เปลี่ยนสีธีมได้, ทุกฟีเจอร์รวมในนี้ครบ!"
-tipLabel.Font = Enum.Font.Gotham
-tipLabel.TextSize = 13
-tipLabel.BackgroundTransparency = 1
-tipLabel.TextWrapped = true
+local speedLabel = Instance.new("TextLabel", frame)
+speedLabel.Size = UDim2.new(0, 50, 0, 22)
+speedLabel.Position = UDim2.new(0, 158, 0, y+1)
+speedLabel.Text = "Speed"
+speedLabel.TextColor3 = Color3.fromRGB(255,255,110)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextSize = 12
 
----------------------- Sound ----------------------
-local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://12222216"
-sound.Volume = 0.5
+local speedBox = Instance.new("TextBox", frame)
+speedBox.Size = UDim2.new(0, 40, 0, 22)
+speedBox.Position = UDim2.new(0, 210, 0, y+1)
+speedBox.Text = "2"
+speedBox.TextColor3 = Color3.fromRGB(0,0,0)
+speedBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
+speedBox.Font = Enum.Font.Gotham
+speedBox.TextSize = 12
 
----------------------- Theme Button ----------------------
-themeBtn.MouseButton1Click:Connect(function()
-    themeIndex = themeIndex % #themeList + 1
-    applyTheme(themeIndex)
-end)
-applyTheme(themeIndex)
+local freecamTip = Instance.new("TextLabel", frame)
+freecamTip.Size = UDim2.new(1, -24, 0, 18)
+freecamTip.Position = UDim2.new(0, 10, 0, y+26)
+freecamTip.Text = "WASD/Space/Shift | Scroll = Speed | เมาส์หันกล้อง"
+freecamTip.Font = Enum.Font.Gotham
+freecamTip.TextSize = 11
+freecamTip.TextColor3 = Color3.fromRGB(210,210,240)
+freecamTip.BackgroundTransparency = 1
 
----------------------- Update GUI ----------------------
-local function updateSaveInfo()
-    if teleportPosition then
-        saveInfoLabel.Text = string.format("ชื่อ: %s (%.1f, %.1f, %.1f)", teleportName~="" and teleportName or "ไม่มีชื่อ", teleportPosition.X, teleportPosition.Y, teleportPosition.Z)
-        saveInfoLabel.TextColor3 = themeList[themeIndex].Btn
-    else
-        saveInfoLabel.Text = "ยังไม่มีจุดวาป"
-        saveInfoLabel.TextColor3 = themeList[themeIndex].Label
-    end
-end
-local function updateSpawnInfo()
-    if spawnPosition then
-        spawnInfoLabel.Text = string.format("ชื่อ: %s (%.1f, %.1f, %.1f)", spawnName~="" and spawnName or "ไม่มีชื่อ", spawnPosition.X, spawnPosition.Y, spawnPosition.Z)
-        spawnInfoLabel.TextColor3 = themeList[themeIndex].Btn
-    else
-        spawnInfoLabel.Text = "ยังไม่มีจุดเกิด"
-        spawnInfoLabel.TextColor3 = themeList[themeIndex].Label
-    end
-end
-local function updateRespawnInfo()
-    if respawnPosition then
-        respawnInfoLabel.Text = string.format("ชื่อ: %s (%.1f, %.1f, %.1f)", respawnName~="" and respawnName or "ไม่มีชื่อ", respawnPosition.X, respawnPosition.Y, respawnPosition.Z)
-        respawnInfoLabel.TextColor3 = themeList[themeIndex].Btn
-    else
-        respawnInfoLabel.Text = "ยังไม่มีจุดเกิดใหม่"
-        respawnInfoLabel.TextColor3 = themeList[themeIndex].Label
-    end
-end
-local function updateDeathInfo()
-    if deathPosition then
-        diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPosition.X, deathPosition.Y, deathPosition.Z)
-        diedtpInfo.TextColor3 = themeList[themeIndex].Btn
-    else
-        diedtpInfo.Text = "ยังไม่ตาย"
-        diedtpInfo.TextColor3 = themeList[themeIndex].Label
-    end
-end
+-- 3. Set Spawn
+y = y + 50
+local spawnCircle = makeStatusCircle(frame, Color3.fromRGB(210, 210, 50), y+2)
+local spawnBtn = Instance.new("TextButton", frame)
+spawnBtn.Size = UDim2.new(0, 120, 0, 24)
+spawnBtn.Position = UDim2.new(0, 32, 0, y)
+spawnBtn.Text = "Set Spawn"
+spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 14
+spawnBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+spawnBtn.TextColor3 = Color3.new(1,1,1)
 
----------------------- Save/Spawn/Respawn/DeathTP Actions ----------------------
-saveBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        teleportPosition = char.HumanoidRootPart.Position
-        teleportName = saveNameBox.Text
-        updateSaveInfo()
-    end
-end)
-warpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if teleportPosition and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
-        sound.Parent = char.HumanoidRootPart
-        sound:Play()
-    end
-end)
-clearBtn.MouseButton1Click:Connect(function()
-    teleportPosition, teleportName = nil, ""
-    updateSaveInfo()
-end)
+local spawnInfo = Instance.new("TextLabel", frame)
+spawnInfo.Size = UDim2.new(1, -160, 0, 24)
+spawnInfo.Position = UDim2.new(0, 160, 0, y)
+spawnInfo.Text = "ยังไม่ตั้งจุดเกิด"
+spawnInfo.Font = Enum.Font.Gotham
+spawnInfo.TextSize = 12
+spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
+spawnInfo.BackgroundTransparency = 1
+spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
 
-spawnBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        spawnPosition = char.HumanoidRootPart.Position
-        spawnName = spawnNameBox.Text
-        updateSpawnInfo()
-    end
-end)
-spawnWarpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if spawnPosition and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(spawnPosition)
-        sound.Parent = char.HumanoidRootPart
-        sound:Play()
-    end
-end)
-spawnClearBtn.MouseButton1Click:Connect(function()
-    spawnPosition, spawnName = nil, ""
-    updateSpawnInfo()
-end)
+-- 4. DiedTP
+y = y + 38
+local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
+diedtpBtn.Position = UDim2.new(0, 32, 0, y)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 14
+diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
 
-respawnBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        respawnPosition = char.HumanoidRootPart.Position
-        respawnName = respawnNameBox.Text
-        updateRespawnInfo()
-    end
-end)
-respawnWarpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if respawnPosition and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(respawnPosition)
-        sound.Parent = char.HumanoidRootPart
-        sound:Play()
-    end
-end)
-respawnClearBtn.MouseButton1Click:Connect(function()
-    respawnPosition, respawnName = nil, ""
-    updateRespawnInfo()
-end)
+local diedtpInfo = Instance.new("TextLabel", frame)
+diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
+diedtpInfo.Position = UDim2.new(0, 160, 0, y)
+diedtpInfo.Text = "ยังไม่ตาย"
+diedtpInfo.Font = Enum.Font.Gotham
+diedtpInfo.TextSize = 12
+diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
+diedtpInfo.BackgroundTransparency = 1
+diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
 
-diedtpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if deathPosition and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(deathPosition)
-        sound.Parent = char.HumanoidRootPart
-        sound:Play()
-    end
-end)
+-- ท้ายสุด
+local tip = Instance.new("TextLabel", frame)
+tip.Size = UDim2.new(1, -20, 0, 26)
+tip.Position = UDim2.new(0, 10, 0, 219)
+tip.Text = "ปุ่มลัด: F=Freecam, K=Set Spawn, G=DiedTP, Q=AntiFling"
+tip.Font = Enum.Font.Gotham
+tip.TextSize = 12
+tip.TextColor3 = Color3.fromRGB(200,255,190)
+tip.BackgroundTransparency = 1
 
----------------------- Invisible & HideHitbox ----------------------
-local function setInvisible(state)
-    local char = player.Character
-    if not char then return end
-    isInvisible = state
-    for _,v in ipairs(char:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-            if state then
-                savedTransparency[v] = v.Transparency
-                v.Transparency = 1
-                if v:FindFirstChildOfClass("Decal") then
-                    for _,d in ipairs(v:GetChildren()) do
-                        if d:IsA("Decal") then d.Transparency = 1 end
-                    end
-                end
-            else
-                v.Transparency = savedTransparency[v] or 0
-                if v:FindFirstChildOfClass("Decal") then
-                    for _,d in ipairs(v:GetChildren()) do
-                        if d:IsA("Decal") then d.Transparency = 0 end
-                    end
-                end
-            end
-        end
-    end
-    if char:FindFirstChild("Head") and char.Head:FindFirstChild("face") then
-        char.Head.face.Transparency = state and 1 or 0
-    end
-    for _,v in ipairs(char:GetChildren()) do
-        if v:IsA("Accessory") and v:FindFirstChild("Handle") then
-            v.Handle.Transparency = state and 1 or 0
-        end
-    end
-    invisBtn.Text = state and "Uninvisible" or "ล่องหน"
-end
+---------------------------- LOGIC ----------------------------
 
-local function setHideHitbox(state)
-    local char = player.Character
-    if not char then return end
-    isHitboxHidden = state
-    for _,v in ipairs(char:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-            if state then
-                savedCanCollide[v] = v.CanCollide
-                v.CanCollide = false
-                v.Size = Vector3.new(0.2,0.2,0.2)
-            else
-                v.CanCollide = savedCanCollide[v] or true
-                v.Size = v.Size.Magnitude < 0.3 and Vector3.new(2,2,1) or v.Size
-            end
-        end
-    end
-    hitboxBtn.Text = state and "คืน Hitbox" or "ซ่อน Hitbox"
-end
-
-invisBtn.MouseButton1Click:Connect(function() setInvisible(not isInvisible) end)
-hitboxBtn.MouseButton1Click:Connect(function() setHideHitbox(not isHitboxHidden) end)
-player.CharacterAdded:Connect(function()
-    wait(0.3)
-    if isInvisible then setInvisible(true) end
-    if isHitboxHidden then setHideHitbox(true) end
-end)
-
----------------------- AntiFling & Close ----------------------
+-- 1. AntiFling
+local antiflingEnabled = false
 local function setAntiFling(state)
-    antiFlingEnabled = state
-    antiflingBtn.Text = state and "ปิด AntiFling" or "เปิด AntiFling"
+    antiflingEnabled = state
+    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
+    antiflingCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
 end
 antiflingBtn.MouseButton1Click:Connect(function()
-    setAntiFling(not antiFlingEnabled)
-end)
-closeBtn.MouseButton1Click:Connect(function()
-    gui.Enabled = false
+    setAntiFling(not antiflingEnabled)
 end)
 
----------------------- Hotkey Handler ----------------------
-local UIS = game:GetService("UserInputService")
-UIS.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == hotkeys.save then saveBtn:Activate()
-    elseif input.KeyCode == hotkeys.warp then warpBtn:Activate()
-    elseif input.KeyCode == hotkeys.spawn then spawnWarpBtn:Activate()
-    elseif input.KeyCode == hotkeys.respawn then respawnWarpBtn:Activate()
-    elseif input.KeyCode == hotkeys.diedtp then diedtpBtn:Activate()
-    elseif input.KeyCode == hotkeys.togglegui then gui.Enabled = not gui.Enabled
-    elseif input.KeyCode == hotkeys.freecam then freecamBtn:Activate()
-    elseif input.KeyCode == hotkeys.invisible then invisBtn:Activate()
-    elseif input.KeyCode == hotkeys.hidehitbox then hitboxBtn:Activate()
+-- AntiFling loop (inspired by Infinite Yield)
+spawn(function()
+    while true do
+        task.wait(0.2)
+        if antiflingEnabled then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
+                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
     end
 end)
 
----------------------- Freecam ----------------------
+-- 2. Freecam
 local freecamActive, freecamConnection, freecamSpeed = false, nil, 2
-local camera = workspace.CurrentCamera
+local function setFreecam(state)
+    freecamActive = state
+    freecamBtn.Text = "Freecam : " .. (state and "เปิด" or "ปิด")
+    freecamCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
+end
+freecamBtn.MouseButton1Click:Connect(function()
+    setFreecam(not freecamActive)
+    if freecamActive then
+        startFreecam()
+    end
+end)
+
 local function startFreecam()
-    if freecamActive then return end
-    freecamActive = true
+    -- Inspired by Infinite Yield/Script-Ware, but logic rewritten
     local UIS = game:GetService("UserInputService")
     local RS = game:GetService("RunService")
     local cam = workspace.CurrentCamera
     local camCFrame = cam.CFrame
-    freecamSpeed = tonumber(freecamSpeedBox.Text) or 2
+    freecamSpeed = tonumber(speedBox.Text) or 2
     local moveVec = Vector3.new()
     local up, down = false, false
+
     cam.CameraType = Enum.CameraType.Scriptable
     cam.CFrame = camCFrame
     local mouseDelta = Vector2.new()
     local function onInput(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == hotkeys.freecam then freecamActive = false
+            if input.KeyCode == Enum.KeyCode.F then setFreecam(false) -- ปิด
             elseif input.KeyCode == Enum.KeyCode.W then moveVec = Vector3.new(0,0,-1)
             elseif input.KeyCode == Enum.KeyCode.A then moveVec = Vector3.new(-1,0,0)
             elseif input.KeyCode == Enum.KeyCode.S then moveVec = Vector3.new(0,0,1)
@@ -672,7 +214,7 @@ local function startFreecam()
         elseif input.UserInputType == Enum.UserInputType.MouseWheel then
             if input.Position.Z > 0 then freecamSpeed = freecamSpeed + 0.5
             elseif input.Position.Z < 0 and freecamSpeed > 0.5 then freecamSpeed = freecamSpeed - 0.5 end
-            freecamSpeedBox.Text = tostring(math.floor(freecamSpeed*10)/10)
+            speedBox.Text = tostring(math.floor(freecamSpeed*10)/10)
         end
     end
     local function onInputEnd(input, gpe)
@@ -715,128 +257,58 @@ local function startFreecam()
         cam.CFrame = camCFrame
     end)
 end
-freecamBtn.MouseButton1Click:Connect(function()
-    if not freecamActive then
-        startFreecam()
-        freecamBtn.Text = "Freecam (On)"
-    else
-        freecamActive = false
-        freecamBtn.Text = "Freecam"
-    end
-end)
-freecamSpeedBox.FocusLost:Connect(function(enter)
-    if enter then freecamSpeed = tonumber(freecamSpeedBox.Text) or 2 end
+speedBox.FocusLost:Connect(function(enter)
+    if enter then freecamSpeed = tonumber(speedBox.Text) or 2 end
 end)
 
----------------------- Auto Teleport (HP < 10%) ----------------------
-local function startTeleportSpam(humanoid)
-    teleporting = true
-    while teleporting and teleportPosition and humanoid.Health > 0 and (humanoid.Health / humanoid.MaxHealth) <= 0.1 do
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
-            sound.Parent = char.HumanoidRootPart
-            sound:Play()
-        end
-        task.wait(0.1)
-    end
-    teleporting = false
-end
-local function setupAutoTeleport(humanoid)
-    humanoid.HealthChanged:Connect(function(health)
-        if teleportPosition and health > 0 and (health / humanoid.MaxHealth) <= 0.1 and not teleporting and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-            startTeleportSpam(humanoid)
-        elseif teleporting and ((health / humanoid.MaxHealth) > 0.1 or health <= 0 or not teleportPosition) then
-            teleporting = false
-        end
-    end)
-end
-
----------------------- Anti-Void/AntiFling ----------------------
-spawn(function()
-    while true do
-        task.wait(0.2)
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
-            local y = char.HumanoidRootPart.Position.Y
-            local hum = char.Humanoid
-            if y < SAFE_Y and hum.Health > 0 then
-                if teleportPosition then
-                    char.HumanoidRootPart.CFrame = CFrame.new(teleportPosition)
-                elseif spawnPosition then
-                    char.HumanoidRootPart.CFrame = CFrame.new(spawnPosition)
-                elseif respawnPosition then
-                    char.HumanoidRootPart.CFrame = CFrame.new(respawnPosition)
-                else
-                    char.HumanoidRootPart.CFrame = CFrame.new(DEFAULT_SPAWN)
-                end
-                sound.Parent = char.HumanoidRootPart
-                sound:Play()
-            end
-            if antiFlingEnabled then
-                local hrp = char.HumanoidRootPart
-                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                end
-                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
-                    hrp.RotVelocity = Vector3.new(0, 0, 0)
-                end
-            end
-        end
+-- 3. Set Spawn
+local spawnPos
+spawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPos = char.HumanoidRootPart.Position
+        spawnCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
+        spawnInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", spawnPos.X, spawnPos.Y, spawnPos.Z)
+        spawnInfo.TextColor3 = Color3.fromRGB(80,210,80)
     end
 end)
 
----------------------- Anti-AFK ----------------------
-spawn(function()
-    while true do
-        task.wait(300)
-        local VirtualUser = game:GetService("VirtualUser")
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new(0,0))
-        local char = player.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
+-- เมื่อเกิดใหม่จะวาร์ปไป spawn
+player.CharacterAdded:Connect(function(char)
+    wait(0.1)
+    if spawnPos then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
     end
 end)
 
----------------------- Custom Respawn & DeathTP ----------------------
+-- 4. DiedTP
+local deathPos
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
-    setupAutoTeleport(hum)
-    if sound.Parent ~= nil then sound.Parent = nil end
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    task.wait(0.1)
-    if hrp.Position.Y < SAFE_Y then
-        if respawnPosition then
-            hrp.CFrame = CFrame.new(respawnPosition)
-        elseif spawnPosition then
-            hrp.CFrame = CFrame.new(spawnPosition)
-        else
-            hrp.CFrame = CFrame.new(DEFAULT_SPAWN)
-        end
-    end
     hum.Died:Connect(function()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            deathPosition = hrp.Position
-            updateDeathInfo()
-            if respawnPosition then
-                hrp.CFrame = CFrame.new(respawnPosition)
-            elseif spawnPosition then
-                hrp.CFrame = CFrame.new(spawnPosition)
-            else
-                hrp.CFrame = CFrame.new(DEFAULT_SPAWN)
-            end
+            deathPos = hrp.Position
+            diedtpCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
+            diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
+            diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
         end
     end)
 end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
+    end
+end)
 
----------------------- INIT ----------------------
-if player.Character and player.Character:FindFirstChild("Humanoid") then
-    setupAutoTeleport(player.Character.Humanoid)
-end
-updateSaveInfo()
-updateSpawnInfo()
-updateRespawnInfo()
-updateDeathInfo()
-setAntiFling(false)
+------------------------ HOTKEYS ------------------------
+local UIS = game:GetService("UserInputService")
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.F then freecamBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.K then spawnBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.G then diedtpBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.Q then antiflingBtn:Activate() end
+end)
