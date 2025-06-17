@@ -1,6 +1,5 @@
--- Ultimate Utility GUI : AntiFling, Set Spawn (2 จุด), AutoTP (HP<10%), DiedTP, Drag GUI, Hide/Show GUI, Custom Hotkey
--- Inspired by Infinite Yield (no code copied), fully written for safety and customization.
--- วางใน LocalScript (StarterPlayerScripts) หรือ Executor ที่รองรับ
+-- Ultimate Utility GUI : AntiFling, Set Spawn (2 จุด), AutoTP (HP<10%), DiedTP (อัตโนมัติ), Drag GUI, Hide/Show GUI
+-- ไม่มีปุ่มลัด, DiedTP จะวาร์ปทันทีเมื่อตัวละครตาย, AutoTP แยกจุดเอง, Inspired by Infinite Yield แต่เขียนใหม่หมด
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -8,7 +7,7 @@ gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 370, 0, 330)
+frame.Size = UDim2.new(0, 370, 0, 290)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0.1
@@ -152,21 +151,12 @@ spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
 spawnInfo.BackgroundTransparency = 1
 spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 4. DiedTP
+-- 4. DiedTP (Auto)
 y = y + 38
 local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
-local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
-diedtpBtn.Position = UDim2.new(0, 32, 0, y)
-diedtpBtn.Text = "DiedTP"
-diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 14
-diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
-diedtpBtn.TextColor3 = Color3.new(1,1,1)
-
 local diedtpInfo = Instance.new("TextLabel", frame)
-diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
-diedtpInfo.Position = UDim2.new(0, 160, 0, y)
+diedtpInfo.Size = UDim2.new(1, -36, 0, 24)
+diedtpInfo.Position = UDim2.new(0, 32, 0, y)
 diedtpInfo.Text = "ยังไม่ตาย"
 diedtpInfo.Font = Enum.Font.Gotham
 diedtpInfo.TextSize = 12
@@ -174,59 +164,11 @@ diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
 diedtpInfo.BackgroundTransparency = 1
 diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 5. Hotkey Setting
-y = y + 38
-local hotkeyLabel = Instance.new("TextLabel", frame)
-hotkeyLabel.Size = UDim2.new(1, -20, 0, 18)
-hotkeyLabel.Position = UDim2.new(0, 10, 0, y)
-hotkeyLabel.Text = "🌟 ตั้งค่าปุ่มลัด (คลิกปุ่มแล้วกดคีย์ที่ต้องการ)"
-hotkeyLabel.Font = Enum.Font.Gotham
-hotkeyLabel.TextSize = 12
-hotkeyLabel.TextColor3 = Color3.fromRGB(255,255,200)
-hotkeyLabel.BackgroundTransparency = 1
-y = y + 18
-
-local hotkeyBtns = {}
-local hotkeyFields = {
-    {name="AntiFling", field="antifling", def=Enum.KeyCode.Q, ref=antiflingBtn},
-    {name="AutoTP", field="autotp", def=Enum.KeyCode.T, ref=autotpswitch},
-    {name="Set Spawn", field="spawn", def=Enum.KeyCode.K, ref=spawnBtn},
-    {name="Set AutoTP", field="autoset", def=Enum.KeyCode.U, ref=autosetBtn},
-    {name="DiedTP", field="diedtp", def=Enum.KeyCode.G, ref=diedtpBtn},
-    {name="Toggle GUI", field="toggle", def=Enum.KeyCode.F1, ref=hideBtn},
-}
-local hotkeys = {}
-for i, hk in ipairs(hotkeyFields) do
-    hotkeys[hk.field] = hk.def
-    local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(0, 86, 0, 20)
-    btn.Position = UDim2.new(0, 12 + ((i-1)%4)*90, 0, y + math.floor((i-1)/4)*24)
-    btn.Text = hk.def.Name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 11
-    btn.TextColor3 = Color3.new(.9,.9,.9)
-    btn.BackgroundColor3 = Color3.fromRGB(70, 80, 100)
-    btn.AutoButtonColor = true
-    hotkeyBtns[hk.field] = btn
-
-    btn.MouseButton1Click:Connect(function()
-        btn.Text = "กดคีย์..."
-        local con
-        con = UserInputService.InputBegan:Connect(function(input, gp)
-            if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
-                hotkeys[hk.field] = input.KeyCode
-                btn.Text = input.KeyCode.Name
-                con:Disconnect()
-            end
-        end)
-    end)
-end
-
 -- ท้ายสุด
 local tip = Instance.new("TextLabel", frame)
 tip.Size = UDim2.new(1, -20, 0, 28)
-tip.Position = UDim2.new(0, 10, 0, 294)
-tip.Text = "ลาก GUI ได้ | Hide GUI | ตั้งค่าปุ่มลัดเอง"
+tip.Position = UDim2.new(0, 10, 0, 244)
+tip.Text = "ลาก GUI ได้ | Hide GUI | DiedTP อัตโนมัติเมื่อเกิดใหม่"
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 12
 tip.TextColor3 = Color3.fromRGB(200,255,190)
@@ -334,7 +276,7 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 4. DiedTP
+-- 4. DiedTP (อัตโนมัติเมื่อเกิดใหม่)
 local deathPos
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
@@ -347,26 +289,20 @@ player.CharacterAdded:Connect(function(char)
             diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
         end
     end)
-end)
-diedtpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
-    end
-end)
-
--- HOTKEYS
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    for field, key in pairs(hotkeys) do
-        if input.KeyCode == key then
-            if field == "antifling" then antiflingBtn:Activate()
-            elseif field == "autotp" then autotpswitch:Activate()
-            elseif field == "spawn" then spawnBtn:Activate()
-            elseif field == "autoset" then autosetBtn:Activate()
-            elseif field == "diedtp" then diedtpBtn:Activate()
-            elseif field == "toggle" then hideBtn:Activate()
+    -- DiedTP จะทำงานอัตโนมัติเมื่อ respawn
+    if deathPos then
+        -- รอให้ HumanoidRootPart โผล่แน่ ๆ
+        spawn(function()
+            local hrp
+            for i=1,50 do
+                hrp = char:FindFirstChild("HumanoidRootPart")
+                if hrp then break end
+                wait(0.06)
             end
-        end
+            if hrp and deathPos then
+                hrp.CFrame = CFrame.new(deathPos)
+                diedtpInfo.Text = "วาร์ปไปจุดตายล่าสุดแล้ว"
+            end
+        end)
     end
 end)
