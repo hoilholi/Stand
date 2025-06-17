@@ -1,5 +1,6 @@
 -- Ultimate Utility GUI (Style ตามภาพ, Set Spawn ทับจุดเดิมทันที, ไม่มี delay/รอ)
 -- ฟีเจอร์: AntiFling, AutoTP (วาป HP<10%, จุดแยก), Set Spawn (เขียนทับทันที), DiedTP (กดปุ่ม), Drag GUI
+-- เพิ่มคำสั่ง: AntiIdle, Freecam, Reset (ปุ่มแยกขวา)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -17,7 +18,7 @@ frame.BorderSizePixel = 0
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
 frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.Y - frame.AbsolutePosition.Y < 36 then -- drag only title bar
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.Y - frame.AbsolutePosition.Y < 36 then
 		dragging = true
 		dragStart = input.Position
 		startPos = frame.Position
@@ -228,7 +229,7 @@ autosetBtn.MouseButton1Click:Connect(function()
 end)
 updateAutoTPInfo()
 
--- 3. Set Spawn (แก้ไขใหม่: บันทึกพิกัดใหม่ ทับทันที ไม่มี delay)
+-- 3. Set Spawn (บันทึกพิกัดใหม่ ทับทันที ไม่มี delay)
 local spawnPos
 local function updateSpawnInfo()
     if spawnPos then
@@ -285,7 +286,6 @@ local function updateDiedTPInfo()
 end
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
-    -- อัปเดต deathPos ไวขึ้น
     local diedFlag = false
     hum.Died:Connect(function()
         diedFlag = true
@@ -309,3 +309,154 @@ end)
 updateSpawnInfo()
 updateAutoTPInfo()
 updateDiedTPInfo()
+
+---------------------------------------------------------------
+-- เพิ่มปุ่มและคำสั่ง Infinite Yield (AntiIdle, Freecam, Reset)
+-- ปุ่ม "AntiIdle"
+local antiidleBtn = Instance.new("TextButton", gui)
+antiidleBtn.Size = UDim2.new(0, 100, 0, 24)
+antiidleBtn.Position = UDim2.new(0, 410, 0, 40)
+antiidleBtn.Text = "AntiIdle"
+antiidleBtn.Font = Enum.Font.GothamBold
+antiidleBtn.TextSize = 13
+antiidleBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+antiidleBtn.TextColor3 = Color3.new(1,1,1)
+antiidleBtn.BorderSizePixel = 0
+antiidleBtn.AutoButtonColor = true
+
+local function run_antiidle()
+    -- Infinite Yield antiidle
+    local vu = game:GetService("VirtualUser")
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        wait(1)
+        vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    end)
+    print("[Ultimate Utility] antiidle enabled: You won't get kicked for being idle/afk.")
+end
+antiidleBtn.MouseButton1Click:Connect(run_antiidle)
+
+-- ปุ่ม "Freecam"
+local freecamBtn = Instance.new("TextButton", gui)
+freecamBtn.Size = UDim2.new(0, 100, 0, 24)
+freecamBtn.Position = UDim2.new(0, 410, 0, 80)
+freecamBtn.Text = "Freecam"
+freecamBtn.Font = Enum.Font.GothamBold
+freecamBtn.TextSize = 13
+freecamBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+freecamBtn.TextColor3 = Color3.new(1,1,1)
+freecamBtn.BorderSizePixel = 0
+freecamBtn.AutoButtonColor = true
+
+local function run_freecam()
+    -- Infinite Yield freecam
+    local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+    local Camera = workspace.CurrentCamera
+    local player = Players.LocalPlayer
+
+    local flying = false
+    local camConn, inputConn, inputEndConn, mouseConn
+    local freecamSpeed = 2
+
+    local function StartFreecam()
+        if flying then return end
+        flying = true
+        local lastCFrame = Camera.CFrame
+        Camera.CameraType = Enum.CameraType.Scriptable
+        Camera.CFrame = lastCFrame
+        local moveDir = Vector3.new()
+        local up, down = false, false
+        local mouseDelta = Vector2.new()
+        local sens = 0.17
+
+        function onInput(input, gpe)
+            if gpe then return end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.W then moveDir = Vector3.new(0,0,-1)
+                elseif input.KeyCode == Enum.KeyCode.S then moveDir = Vector3.new(0,0,1)
+                elseif input.KeyCode == Enum.KeyCode.A then moveDir = Vector3.new(-1,0,0)
+                elseif input.KeyCode == Enum.KeyCode.D then moveDir = Vector3.new(1,0,0)
+                elseif input.KeyCode == Enum.KeyCode.Space then up = true
+                elseif input.KeyCode == Enum.KeyCode.LeftShift then down = true
+                elseif input.KeyCode == Enum.KeyCode.F then flying = false
+                end
+            elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+                if input.Position.Z > 0 then freecamSpeed = freecamSpeed + 0.5
+                elseif input.Position.Z < 0 and freecamSpeed > 0.5 then freecamSpeed = freecamSpeed - 0.5 end
+            end
+        end
+        function onInputEnd(input, gpe)
+            if gpe then return end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveDir = Vector3.new(0,0,0)
+                elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveDir = Vector3.new(0,0,0)
+                elseif input.KeyCode == Enum.KeyCode.Space then up = false
+                elseif input.KeyCode == Enum.KeyCode.LeftShift then down = false
+                end
+            end
+        end
+        function mouseMove(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                mouseDelta = input.Delta
+            end
+        end
+
+        pcall(function()
+            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+        end)
+
+        inputConn = UserInputService.InputBegan:Connect(onInput)
+        inputEndConn = UserInputService.InputEnded:Connect(onInputEnd)
+        mouseConn = UserInputService.InputChanged:Connect(mouseMove)
+        camConn = RunService.RenderStepped:Connect(function(dt)
+            if not flying then
+                Camera.CameraType = Enum.CameraType.Custom
+                pcall(function() UserInputService.MouseBehavior = Enum.MouseBehavior.Default end)
+                if camConn then camConn:Disconnect() end
+                if inputConn then inputConn:Disconnect() end
+                if inputEndConn then inputEndConn:Disconnect() end
+                if mouseConn then mouseConn:Disconnect() end
+                return
+            end
+            local yAngle = -mouseDelta.X * sens * dt * 60
+            local xAngle = -mouseDelta.Y * sens * dt * 60
+            lastCFrame = lastCFrame * CFrame.Angles(0, math.rad(yAngle), 0) * CFrame.Angles(math.rad(xAngle), 0, 0)
+            mouseDelta = Vector2.new()
+            local move = Vector3.new()
+            if moveDir.Z ~= 0 then move = move + lastCFrame.LookVector * moveDir.Z end
+            if moveDir.X ~= 0 then move = move + lastCFrame.RightVector * moveDir.X end
+            if up then move = move + lastCFrame.UpVector end
+            if down then move = move - lastCFrame.UpVector end
+            lastCFrame = lastCFrame + move * (freecamSpeed * dt * 10)
+            Camera.CFrame = lastCFrame
+        end)
+    end
+    StartFreecam()
+    print("[Ultimate Utility] Freecam enabled. Press F to exit.")
+end
+freecamBtn.MouseButton1Click:Connect(run_freecam)
+
+-- ปุ่ม "Reset"
+local resetBtn = Instance.new("TextButton", gui)
+resetBtn.Size = UDim2.new(0, 100, 0, 24)
+resetBtn.Position = UDim2.new(0, 410, 0, 120)
+resetBtn.Text = "Reset"
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextSize = 13
+resetBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+resetBtn.TextColor3 = Color3.new(1,1,1)
+resetBtn.BorderSizePixel = 0
+resetBtn.AutoButtonColor = true
+
+local function run_reset()
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+        player.Character:FindFirstChildOfClass("Humanoid").Health = 0
+        print("[Ultimate Utility] Character reset.")
+    else
+        warn("[Ultimate Utility] Character or Humanoid not found.")
+    end
+end
+resetBtn.MouseButton1Click:Connect(run_reset)
