@@ -1,26 +1,18 @@
--- Ultimate Utility GUI (Freecam WASD สมดุล, ยกเลิก Freecam ได้, ปรับสปีด, ตั้งปุ่มลัด, GUI แยกฟีเจอร์)
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, Drag GUI, AntiIdle/Freecam/Reset
+-- Ultimate Utility GUI (สไตล์ตามภาพ, รวม Extra Commands กับ Utility หลัก, ไม่มี Freecam, Drag GUI)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Reset, Hotkey ตั้งได้ (แต่ไม่มี Freecam)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
--- Main Utility Frame
+--------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 360, 0, 170)
+frame.Size = UDim2.new(0, 370, 0, 260)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
-frame.BackgroundTransparency = 0.13
+frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
-
--- New Command Frame (for AntiIdle, Freecam, Reset)
-local cmdFrame = Instance.new("Frame", gui)
-cmdFrame.Size = UDim2.new(0, 210, 0, 110)
-cmdFrame.Position = UDim2.new(0, 410, 0, 40)
-cmdFrame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
-cmdFrame.BackgroundTransparency = 0.13
-cmdFrame.BorderSizePixel = 0
 
 -- Title bar Main
 local title = Instance.new("TextLabel", frame)
@@ -31,16 +23,6 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 235, 110)
-
--- Title bar Commands
-local cmdTitle = Instance.new("TextLabel", cmdFrame)
-cmdTitle.Size = UDim2.new(1, 0, 0, 24)
-cmdTitle.Position = UDim2.new(0, 0, 0, 0)
-cmdTitle.Text = "Extra Commands"
-cmdTitle.Font = Enum.Font.GothamBold
-cmdTitle.TextSize = 16
-cmdTitle.BackgroundTransparency = 1
-cmdTitle.TextColor3 = Color3.fromRGB(255, 235, 110)
 
 -- DRAGGABLE GUI
 local UserInputService = game:GetService("UserInputService")
@@ -71,13 +53,16 @@ local function makeDraggable(target, ybar)
     end)
 end
 makeDraggable(frame, 36)
-makeDraggable(cmdFrame, 24)
 
-local y = 36
+local y0 = 36
+local rowH = 32
+local leftX = 10
+local btnX = 150
+
 local function makeStatusCircle(parent, color, y)
     local cir = Instance.new("Frame", parent)
     cir.Size = UDim2.new(0, 18, 0, 18)
-    cir.Position = UDim2.new(0, 8, 0, y)
+    cir.Position = UDim2.new(0, leftX, 0, y+7)
     cir.BackgroundColor3 = color
     cir.BorderSizePixel = 0
     cir.Name = "StatusCircle"
@@ -89,59 +74,248 @@ local statusColors = {
     on = Color3.fromRGB(80,210,80),
     off = Color3.fromRGB(210,50,50)
 }
+local darkbtn = Color3.fromRGB(47,52,65)
+local bluebtn = Color3.fromRGB(66,117,143)
 
--- Ultimate Utility GUI features (AntiFling, AutoTP, Set Spawn, DiedTP) ... (เหมือนเดิมขอข้ามส่วนนี้)
+-- 1. AntiFling
+local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
+local antiflingBtn = Instance.new("TextButton", frame)
+antiflingBtn.Size = UDim2.new(0, 130, 0, 28)
+antiflingBtn.Position = UDim2.new(0, leftX+28, 0, y0+4)
+antiflingBtn.Text = "AntiFling : ปิด"
+antiflingBtn.Font = Enum.Font.GothamBold
+antiflingBtn.TextSize = 16
+antiflingBtn.BackgroundColor3 = darkbtn
+antiflingBtn.TextColor3 = Color3.new(1,1,1)
+antiflingBtn.BorderSizePixel = 0
+antiflingBtn.AutoButtonColor = true
 
--- ... (ข้ามไปยัง Freecam)
+-- 2. AutoTP
+local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
+local autotpswitch = Instance.new("TextButton", frame)
+autotpswitch.Size = UDim2.new(0, 130, 0, 28)
+autotpswitch.Position = UDim2.new(0, leftX+28, 0, y0+rowH+4)
+autotpswitch.Text = "AutoTP : ปิด"
+autotpswitch.Font = Enum.Font.GothamBold
+autotpswitch.TextSize = 16
+autotpswitch.BackgroundColor3 = darkbtn
+autotpswitch.TextColor3 = Color3.new(1,1,1)
+autotpswitch.BorderSizePixel = 0
 
--- ช่อง GUI สำหรับคำสั่งใหม่
+local autosetBtn = Instance.new("TextButton", frame)
+autosetBtn.Size = UDim2.new(0, 110, 0, 28)
+autosetBtn.Position = UDim2.new(0, btnX+60, 0, y0+rowH+4)
+autosetBtn.Text = "Set AutoTP"
+autosetBtn.Font = Enum.Font.GothamBold
+autosetBtn.TextSize = 14
+autosetBtn.BackgroundColor3 = bluebtn
+autosetBtn.TextColor3 = Color3.new(1,1,1)
+autosetBtn.BorderSizePixel = 0
+autosetBtn.AutoButtonColor = true
 
--- ปุ่ม "AntiIdle"
-local antiidleBtn = Instance.new("TextButton", cmdFrame)
-antiidleBtn.Size = UDim2.new(0, 90, 0, 26)
-antiidleBtn.Position = UDim2.new(0, 10, 0, 30)
-antiidleBtn.Text = "AntiIdle"
+-- 3. Set Spawn
+local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
+local spawnBtn = Instance.new("TextButton", frame)
+spawnBtn.Size = UDim2.new(0, 130, 0, 28)
+spawnBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*2+4)
+spawnBtn.Text = "Set Spawn"
+spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 16
+spawnBtn.BackgroundColor3 = darkbtn
+spawnBtn.TextColor3 = Color3.new(1,1,1)
+spawnBtn.BorderSizePixel = 0
+spawnBtn.AutoButtonColor = true
+
+-- 4. DiedTP
+local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 130, 0, 28)
+diedtpBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*3+4)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 16
+diedtpBtn.BackgroundColor3 = darkbtn
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
+diedtpBtn.BorderSizePixel = 0
+diedtpBtn.AutoButtonColor = true
+
+--------------------- Extra Commands (รวมในเฟรม) ---------------------
+local cmdTitle = Instance.new("TextLabel", frame)
+cmdTitle.Size = UDim2.new(1, 0, 0, 24)
+cmdTitle.Position = UDim2.new(0, 0, 0, y0+rowH*4+10)
+cmdTitle.Text = "Extra Commands"
+cmdTitle.Font = Enum.Font.GothamBold
+cmdTitle.TextSize = 18
+cmdTitle.BackgroundTransparency = 1
+cmdTitle.TextColor3 = Color3.fromRGB(255, 235, 110)
+
+local btnW, btnH, padX, padY = 101, 32, 6, 6
+local baseY = y0+rowH*4+36
+
+-- Antiidle
+local antiidleBtn = Instance.new("TextButton", frame)
+antiidleBtn.Size = UDim2.new(0, btnW, 0, btnH)
+antiidleBtn.Position = UDim2.new(0, padX, 0, baseY)
+antiidleBtn.Text = "Antiidle"
 antiidleBtn.Font = Enum.Font.GothamBold
-antiidleBtn.TextSize = 13
-antiidleBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+antiidleBtn.TextSize = 16
+antiidleBtn.AutoButtonColor = true
+antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
-antiidleBtn.AutoButtonColor = true
 
+-- FreecamKey (แต่ไม่มี Freecam)
+local hotkeyBtn = Instance.new("TextButton", frame)
+hotkeyBtn.Size = UDim2.new(0, btnW, 0, 28)
+hotkeyBtn.Position = UDim2.new(0, padX, 0, baseY+38)
+hotkeyBtn.Text = "Freecam Key: F"
+hotkeyBtn.Font = Enum.Font.Gotham
+hotkeyBtn.TextSize = 14
+hotkeyBtn.BackgroundColor3 = Color3.fromRGB(35, 44, 70)
+hotkeyBtn.TextColor3 = Color3.new(1,1,0.7)
+hotkeyBtn.BorderSizePixel = 0
+
+-- Reset
+local resetBtn = Instance.new("TextButton", frame)
+resetBtn.Size = UDim2.new(0, btnW, 0, btnH)
+resetBtn.Position = UDim2.new(0, btnW+padX*2, 0, baseY)
+resetBtn.Text = "Reset"
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextSize = 16
+resetBtn.AutoButtonColor = true
+resetBtn.BackgroundColor3 = bluebtn
+resetBtn.TextColor3 = Color3.new(1,1,1)
+resetBtn.BorderSizePixel = 0
+
+-- ========== LOGIC ==========
+
+-- 1. AntiFling
+local antiflingEnabled = false
+local function setAntiFling(state)
+    antiflingEnabled = state
+    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
+    antiflingCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+end
+antiflingBtn.MouseButton1Click:Connect(function()
+    setAntiFling(not antiflingEnabled)
+end)
+spawn(function()
+    while true do
+        task.wait(0.2)
+        if antiflingEnabled then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
+                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+    end
+end)
+
+-- 2. AutoTP (เลือดต่ำวาป: จุดแยกจาก Spawn)
+local autotpenabled = false
+local teleporting = false
+local autotpPos
+local autoTP_HUMANOID = nil
+
+local function updateAutoTPInfo() end
+local function setAutoTP(state)
+    autotpenabled = state
+    autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
+    autotpcircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+end
+autotpswitch.MouseButton1Click:Connect(function()
+    setAutoTP(not autotpenabled)
+end)
+autosetBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        autotpPos = char.HumanoidRootPart.Position
+    end
+end)
+
+-- 3. Set Spawn
+local spawnPos
+spawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPos = char.HumanoidRootPart.Position
+        spawnCircle.BackgroundColor3 = statusColors.on
+    end
+end)
+player.CharacterAdded:Connect(function(char)
+    if spawnPos then
+        local hrp = char:WaitForChild("HumanoidRootPart", 3)
+        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
+    end
+    -- Setup AutoTP ใหม่ทุกครั้งที่เกิด
+    if autoTP_HUMANOID then
+        pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end)
+    end
+    autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
+    if autoTP_HUMANOID then
+        autoTP_HUMANOID.HealthChanged:Connect(function(health)
+            if autotpenabled and autotpPos and health > 0 and (health / autoTP_HUMANOID.MaxHealth) <= 0.1 and not teleporting and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead then
+                teleporting = true
+                local c = player.Character
+                if c and c:FindFirstChild("HumanoidRootPart") then
+                    c.HumanoidRootPart.CFrame = CFrame.new(autotpPos)
+                end
+                wait(0.5)
+                teleporting = false
+            end
+        end)
+    end
+end)
+
+-- 4. DiedTP (ไวและปุ่มกด)
+local deathPos = nil
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    local diedFlag = false
+    hum.Died:Connect(function()
+        diedFlag = true
+    end)
+    game:GetService("RunService").Stepped:Connect(function()
+        if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
+            deathPos = char.HumanoidRootPart.Position
+            diedtpCircle.BackgroundColor3 = statusColors.on
+            diedFlag = false
+        end
+    end)
+end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
+    end
+end)
+
+-- ========== Extra Commands ==========
+
+-- 1. AntiIdle
+local antiidleActive = false
 local function run_antiidle()
+    if antiidleActive then return end
+    antiidleActive = true
     local vu = game:GetService("VirtualUser")
     game:GetService("Players").LocalPlayer.Idled:Connect(function()
         vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
         wait(1)
         vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
     end)
+    antiidleBtn.Text = "Antiidle (On)"
     print("[Ultimate Utility] antiidle enabled: You won't get kicked for being idle/afk.")
 end
 antiidleBtn.MouseButton1Click:Connect(run_antiidle)
 
--- ปุ่ม "Freecam" + ปรับสปีด + ตั้งปุ่มลัด
-local freecamBtn = Instance.new("TextButton", cmdFrame)
-freecamBtn.Size = UDim2.new(0, 90, 0, 26)
-freecamBtn.Position = UDim2.new(0, 110, 0, 30)
-freecamBtn.Text = "Freecam"
-freecamBtn.Font = Enum.Font.GothamBold
-freecamBtn.TextSize = 13
-freecamBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
-freecamBtn.TextColor3 = Color3.new(1,1,1)
-freecamBtn.BorderSizePixel = 0
-freecamBtn.AutoButtonColor = true
-
+-- 2. Freecam Key (ไม่มี Freecam, กดเปลี่ยนปุ่มได้ แต่ไม่ทำงาน)
 local freecamHotkey = Enum.KeyCode.F
-local hotkeyBtn = Instance.new("TextButton", cmdFrame)
-hotkeyBtn.Size = UDim2.new(0, 90, 0, 22)
-hotkeyBtn.Position = UDim2.new(0, 10, 0, 65)
-hotkeyBtn.Text = "Freecam Key: F"
-hotkeyBtn.Font = Enum.Font.Gotham
-hotkeyBtn.TextSize = 12
-hotkeyBtn.BackgroundColor3 = Color3.fromRGB(35, 44, 70)
-hotkeyBtn.TextColor3 = Color3.new(1,1,0.7)
-hotkeyBtn.BorderSizePixel = 0
-
 hotkeyBtn.MouseButton1Click:Connect(function()
     hotkeyBtn.Text = "กดคีย์..."
     local con
@@ -154,154 +328,7 @@ hotkeyBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-local speedLabel = Instance.new("TextLabel", cmdFrame)
-speedLabel.Size = UDim2.new(0, 40, 0, 22)
-speedLabel.Position = UDim2.new(0, 110, 0, 62)
-speedLabel.Text = "Speed:"
-speedLabel.Font = Enum.Font.Gotham
-speedLabel.TextSize = 12
-speedLabel.TextColor3 = Color3.fromRGB(220,220,200)
-speedLabel.BackgroundTransparency = 1
-
-local speedBox = Instance.new("TextBox", cmdFrame)
-speedBox.Size = UDim2.new(0, 55, 0, 22)
-speedBox.Position = UDim2.new(0, 155, 0, 62)
-speedBox.Text = "2"
-speedBox.TextColor3 = Color3.fromRGB(0,0,0)
-speedBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
-speedBox.Font = Enum.Font.Gotham
-speedBox.TextSize = 12
-speedBox.BorderSizePixel = 0
-
--- Freecam logic (แก้ไข movement ให้ตรงกับกล้อง, และยกเลิกได้ด้วยปุ่ม/คลิก)
-local freecamActive = false
-local freecamConnections = {}
-local function disconnectFreecam()
-    for _,v in pairs(freecamConnections) do pcall(function() v:Disconnect() end) end
-    freecamConnections = {}
-end
-local function run_freecam()
-    if freecamActive then return end
-    freecamActive = true
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    local Camera = workspace.CurrentCamera
-    local lastCFrame = Camera.CFrame
-    Camera.CameraType = Enum.CameraType.Scriptable
-    Camera.CFrame = lastCFrame
-    local speed = tonumber(speedBox.Text) or 2
-    local moveVec = Vector3.new()
-    local up, down = false, false
-    local mouseDelta = Vector2.new()
-    local sens = 0.17
-
-    -- Movement state
-    local moveState = {
-        W = false, S = false, A = false, D = false
-    }
-
-    local function getMoveVec()
-        local vec = Vector3.new()
-        if moveState.W then vec = vec + Vector3.new(0,0,-1) end
-        if moveState.S then vec = vec + Vector3.new(0,0,1) end
-        if moveState.A then vec = vec + Vector3.new(-1,0,0) end
-        if moveState.D then vec = vec + Vector3.new(1,0,0) end
-        return vec
-    end
-
-    local function onInput(input, gpe)
-        if gpe then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.W then moveState.W = true
-            elseif input.KeyCode == Enum.KeyCode.S then moveState.S = true
-            elseif input.KeyCode == Enum.KeyCode.A then moveState.A = true
-            elseif input.KeyCode == Enum.KeyCode.D then moveState.D = true
-            elseif input.KeyCode == Enum.KeyCode.Space then up = true
-            elseif input.KeyCode == Enum.KeyCode.LeftShift then down = true
-            -- ยกเลิก Freecam ด้วยคีย์ลัดที่ตั้งเอง
-            elseif input.KeyCode == freecamHotkey then freecamActive = false end
-            -- หรือ Esc ก็ยกเลิก
-            elseif input.KeyCode == Enum.KeyCode.Escape then freecamActive = false end
-        elseif input.UserInputType == Enum.UserInputType.MouseWheel then
-            if input.Position.Z > 0 then
-                speed = math.min(speed + 0.5, 32)
-            elseif input.Position.Z < 0 then
-                speed = math.max(speed - 0.5, 0.5)
-            end
-            speedBox.Text = tostring(math.floor(speed*10)/10)
-        end
-    end
-    local function onInputEnd(input, gpe)
-        if gpe then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.W then moveState.W = false
-            elseif input.KeyCode == Enum.KeyCode.S then moveState.S = false
-            elseif input.KeyCode == Enum.KeyCode.A then moveState.A = false
-            elseif input.KeyCode == Enum.KeyCode.D then moveState.D = false
-            elseif input.KeyCode == Enum.KeyCode.Space then up = false
-            elseif input.KeyCode == Enum.KeyCode.LeftShift then down = false
-            end
-        end
-    end
-    local function mouseMove(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            mouseDelta = input.Delta
-        end
-    end
-
-    pcall(function() UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter end)
-
-    table.insert(freecamConnections, UserInputService.InputBegan:Connect(onInput))
-    table.insert(freecamConnections, UserInputService.InputEnded:Connect(onInputEnd))
-    table.insert(freecamConnections, UserInputService.InputChanged:Connect(mouseMove))
-    table.insert(freecamConnections, speedBox.FocusLost:Connect(function(enter)
-        if enter then
-            local val = tonumber(speedBox.Text)
-            if val then speed = val end
-        end
-    end))
-
-    table.insert(freecamConnections, RunService.RenderStepped:Connect(function(dt)
-        if not freecamActive then
-            Camera.CameraType = Enum.CameraType.Custom
-            pcall(function() UserInputService.MouseBehavior = Enum.MouseBehavior.Default end)
-            disconnectFreecam()
-            return
-        end
-        local yAngle = -mouseDelta.X * sens * dt * 60
-        local xAngle = -mouseDelta.Y * sens * dt * 60
-        lastCFrame = lastCFrame * CFrame.Angles(0, math.rad(yAngle), 0) * CFrame.Angles(math.rad(xAngle), 0, 0)
-        mouseDelta = Vector2.new()
-        local move = getMoveVec()
-        local dir = Vector3.new()
-        if move.Magnitude > 0 then
-            dir = ((lastCFrame.LookVector * move.Z) + (lastCFrame.RightVector * move.X)).Unit * move.Magnitude
-        end
-        if up then dir = dir + lastCFrame.UpVector end
-        if down then dir = dir - lastCFrame.UpVector end
-        lastCFrame = lastCFrame + dir * (speed * dt * 10)
-        Camera.CFrame = lastCFrame
-    end))
-end
-freecamBtn.MouseButton1Click:Connect(run_freecam)
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == freecamHotkey and not freecamActive then
-        run_freecam()
-    end
-end)
-
--- ปุ่ม "Reset"
-local resetBtn = Instance.new("TextButton", cmdFrame)
-resetBtn.Size = UDim2.new(0, 90, 0, 26)
-resetBtn.Position = UDim2.new(0, 110, 0, 65)
-resetBtn.Text = "Reset"
-resetBtn.Font = Enum.Font.GothamBold
-resetBtn.TextSize = 13
-resetBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
-resetBtn.TextColor3 = Color3.new(1,1,1)
-resetBtn.BorderSizePixel = 0
-resetBtn.AutoButtonColor = true
-
+-- 3. Reset
 local function run_reset()
     local player = game.Players.LocalPlayer
     if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
