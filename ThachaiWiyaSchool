@@ -1,33 +1,246 @@
--- วางใน LocalScript (StarterPlayerScripts) หรือรวมกับ GUI เดิมก็ได้
+-- Ultimate Utility GUI : All-in-One (AntiFling, Freecam, Set Spawn, DiedTP, Drag GUI)
+-- Inspired by Infinite Yield, but all code is written here for safety and customization.
+-- วางใน LocalScript (StarterPlayerScripts) หรือ Executor ที่รองรับ
+
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "UltimateUtilityGUI"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 350, 0, 260)
+frame.Position = UDim2.new(0, 40, 0, 110)
+frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
+frame.BackgroundTransparency = 0.1
+frame.BorderSizePixel = 0
+
+-- DRAGGABLE GUI (คลิกค้างลากได้ที่ title bar)
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
+local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
 
-local freecamActive = false
-local freecamSpeed = 2
-local camConn, inputConn, inputEndConn, mouseConn
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
 
-function StartFreecam()
-    freecamActive = true
+-- Title bar
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 36)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Ultimate Utility GUI"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 235, 110)
+
+local y = 44
+
+-- Helper: สถานะวงกลม
+local function makeStatusCircle(parent, color, y)
+    local cir = Instance.new("Frame", parent)
+    cir.Size = UDim2.new(0, 16, 0, 16)
+    cir.Position = UDim2.new(0, 10, 0, y)
+    cir.BackgroundColor3 = color
+    cir.BorderSizePixel = 0
+    cir.Name = "StatusCircle"
+    local uicorner = Instance.new("UICorner", cir)
+    uicorner.CornerRadius = UDim.new(1,0)
+    return cir
+end
+
+-- 1. AntiFling
+local antiflingCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local antiflingBtn = Instance.new("TextButton", frame)
+antiflingBtn.Size = UDim2.new(0, 120, 0, 24)
+antiflingBtn.Position = UDim2.new(0, 32, 0, y)
+antiflingBtn.Text = "AntiFling : ปิด"
+antiflingBtn.Font = Enum.Font.GothamBold
+antiflingBtn.TextSize = 14
+antiflingBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+antiflingBtn.TextColor3 = Color3.new(1,1,1)
+
+-- 2. Freecam
+y = y + 38
+local freecamCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local freecamBtn = Instance.new("TextButton", frame)
+freecamBtn.Size = UDim2.new(0, 120, 0, 24)
+freecamBtn.Position = UDim2.new(0, 32, 0, y)
+freecamBtn.Text = "Freecam : ปิด"
+freecamBtn.Font = Enum.Font.GothamBold
+freecamBtn.TextSize = 14
+freecamBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+freecamBtn.TextColor3 = Color3.new(1,1,1)
+
+local speedLabel = Instance.new("TextLabel", frame)
+speedLabel.Size = UDim2.new(0, 50, 0, 22)
+speedLabel.Position = UDim2.new(0, 158, 0, y+1)
+speedLabel.Text = "Speed"
+speedLabel.TextColor3 = Color3.fromRGB(255,255,110)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextSize = 12
+
+local speedBox = Instance.new("TextBox", frame)
+speedBox.Size = UDim2.new(0, 40, 0, 22)
+speedBox.Position = UDim2.new(0, 210, 0, y+1)
+speedBox.Text = "2"
+speedBox.TextColor3 = Color3.fromRGB(0,0,0)
+speedBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
+speedBox.Font = Enum.Font.Gotham
+speedBox.TextSize = 12
+
+local freecamTip = Instance.new("TextLabel", frame)
+freecamTip.Size = UDim2.new(1, -24, 0, 18)
+freecamTip.Position = UDim2.new(0, 10, 0, y+26)
+freecamTip.Text = "WASD/Space/Shift | Scroll = Speed | เมาส์หันกล้อง"
+freecamTip.Font = Enum.Font.Gotham
+freecamTip.TextSize = 11
+freecamTip.TextColor3 = Color3.fromRGB(210,210,240)
+freecamTip.BackgroundTransparency = 1
+
+-- 3. Set Spawn
+y = y + 50
+local spawnCircle = makeStatusCircle(frame, Color3.fromRGB(210, 210, 50), y+2)
+local spawnBtn = Instance.new("TextButton", frame)
+spawnBtn.Size = UDim2.new(0, 120, 0, 24)
+spawnBtn.Position = UDim2.new(0, 32, 0, y)
+spawnBtn.Text = "Set Spawn"
+spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 14
+spawnBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+spawnBtn.TextColor3 = Color3.new(1,1,1)
+
+local spawnInfo = Instance.new("TextLabel", frame)
+spawnInfo.Size = UDim2.new(1, -160, 0, 24)
+spawnInfo.Position = UDim2.new(0, 160, 0, y)
+spawnInfo.Text = "ยังไม่ตั้งจุดเกิด"
+spawnInfo.Font = Enum.Font.Gotham
+spawnInfo.TextSize = 12
+spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
+spawnInfo.BackgroundTransparency = 1
+spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+-- 4. DiedTP
+y = y + 38
+local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
+diedtpBtn.Position = UDim2.new(0, 32, 0, y)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 14
+diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
+
+local diedtpInfo = Instance.new("TextLabel", frame)
+diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
+diedtpInfo.Position = UDim2.new(0, 160, 0, y)
+diedtpInfo.Text = "ยังไม่ตาย"
+diedtpInfo.Font = Enum.Font.Gotham
+diedtpInfo.TextSize = 12
+diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
+diedtpInfo.BackgroundTransparency = 1
+diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ท้ายสุด
+local tip = Instance.new("TextLabel", frame)
+tip.Size = UDim2.new(1, -20, 0, 26)
+tip.Position = UDim2.new(0, 10, 0, 219)
+tip.Text = "ปุ่มลัด: F=Freecam, K=Set Spawn, G=DiedTP, Q=AntiFling | ลาก GUI ได้"
+tip.Font = Enum.Font.Gotham
+tip.TextSize = 12
+tip.TextColor3 = Color3.fromRGB(200,255,190)
+tip.BackgroundTransparency = 1
+
+---------------------------- LOGIC ----------------------------
+
+-- 1. AntiFling
+local antiflingEnabled = false
+local function setAntiFling(state)
+    antiflingEnabled = state
+    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
+    antiflingCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
+end
+antiflingBtn.MouseButton1Click:Connect(function()
+    setAntiFling(not antiflingEnabled)
+end)
+spawn(function()
+    while true do
+        task.wait(0.2)
+        if antiflingEnabled then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
+                    hrp.RotVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Freecam
+local freecamActive, freecamConnection, freecamSpeed = false, nil, 2
+local function setFreecam(state)
+    freecamActive = state
+    freecamBtn.Text = "Freecam : " .. (state and "เปิด" or "ปิด")
+    freecamCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
+    if freecamActive then
+        startFreecam()
+    end
+end
+freecamBtn.MouseButton1Click:Connect(function()
+    setFreecam(not freecamActive)
+end)
+local function startFreecam()
+    local UIS = game:GetService("UserInputService")
+    local RS = game:GetService("RunService")
+    local Camera = workspace.CurrentCamera
     local lastCFrame = Camera.CFrame
     Camera.CameraType = Enum.CameraType.Scriptable
     Camera.CFrame = lastCFrame
-
-    local moveDir = Vector3.new()
-    local speed = freecamSpeed
+    freecamSpeed = tonumber(speedBox.Text) or 2
+    local moveVec = Vector3.new()
     local up, down = false, false
+    local speed = freecamSpeed
     local mouseDelta = Vector2.new()
     local sens = 0.17
+
+    -- Lock mouse for better experience
+    pcall(function()
+        UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+    end)
 
     function onInput(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.F then
-                StopFreecam()
-            elseif input.KeyCode == Enum.KeyCode.W then moveDir = Vector3.new(0,0,-1)
-            elseif input.KeyCode == Enum.KeyCode.S then moveDir = Vector3.new(0,0,1)
-            elseif input.KeyCode == Enum.KeyCode.A then moveDir = Vector3.new(-1,0,0)
-            elseif input.KeyCode == Enum.KeyCode.D then moveDir = Vector3.new(1,0,0)
+            if input.KeyCode == Enum.KeyCode.F then freecamActive = false
+            elseif input.KeyCode == Enum.KeyCode.W then moveVec = Vector3.new(0,0,-1)
+            elseif input.KeyCode == Enum.KeyCode.A then moveVec = Vector3.new(-1,0,0)
+            elseif input.KeyCode == Enum.KeyCode.S then moveVec = Vector3.new(0,0,1)
+            elseif input.KeyCode == Enum.KeyCode.D then moveVec = Vector3.new(1,0,0)
             elseif input.KeyCode == Enum.KeyCode.Space then up = true
             elseif input.KeyCode == Enum.KeyCode.LeftShift then down = true
             end
@@ -35,13 +248,14 @@ function StartFreecam()
             if input.Position.Z > 0 then speed = speed + 0.5
             elseif input.Position.Z < 0 and speed > 0.5 then speed = speed - 0.5 end
             freecamSpeed = speed
+            speedBox.Text = tostring(math.floor(freecamSpeed*10)/10)
         end
     end
     function onInputEnd(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveDir = Vector3.new(0,0,0)
-            elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveDir = Vector3.new(0,0,0)
+            if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveVec = Vector3.new(0,0,0)
+            elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVec = Vector3.new(0,0,0)
             elseif input.KeyCode == Enum.KeyCode.Space then up = false
             elseif input.KeyCode == Enum.KeyCode.LeftShift then down = false
             end
@@ -53,52 +267,82 @@ function StartFreecam()
         end
     end
 
-    -- Lock mouse to center for better experience
-    pcall(function()
-        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-    end)
-
-    inputConn = UserInputService.InputBegan:Connect(onInput)
-    inputEndConn = UserInputService.InputEnded:Connect(onInputEnd)
-    mouseConn = UserInputService.InputChanged:Connect(mouseMove)
-    camConn = RunService.RenderStepped:Connect(function(dt)
-        if not freecamActive then return end
-        -- Mouse look
+    local inputConn = UIS.InputBegan:Connect(onInput)
+    local inputEndConn = UIS.InputEnded:Connect(onInputEnd)
+    local mouseConn = UIS.InputChanged:Connect(mouseMove)
+    freecamConnection = RS.RenderStepped:Connect(function(dt)
+        if not freecamActive then
+            Camera.CameraType = Enum.CameraType.Custom
+            pcall(function() UIS.MouseBehavior = Enum.MouseBehavior.Default end)
+            if inputConn then inputConn:Disconnect() end
+            if inputEndConn then inputEndConn:Disconnect() end
+            if mouseConn then mouseConn:Disconnect() end
+            if freecamConnection then freecamConnection:Disconnect() end
+            freecamConnection = nil
+            return
+        end
         local yAngle = -mouseDelta.X * sens * dt * 60
         local xAngle = -mouseDelta.Y * sens * dt * 60
         lastCFrame = lastCFrame * CFrame.Angles(0, math.rad(yAngle), 0) * CFrame.Angles(math.rad(xAngle), 0, 0)
         mouseDelta = Vector2.new()
-        -- Move
         local move = Vector3.new()
-        if moveDir.Z ~= 0 then move = move + lastCFrame.LookVector * moveDir.Z end
-        if moveDir.X ~= 0 then move = move + lastCFrame.RightVector * moveDir.X end
+        if moveVec.Z ~= 0 then move = move + lastCFrame.LookVector * moveVec.Z end
+        if moveVec.X ~= 0 then move = move + lastCFrame.RightVector * moveVec.X end
         if up then move = move + lastCFrame.UpVector end
         if down then move = move - lastCFrame.UpVector end
-        lastCFrame = lastCFrame + move * (speed * dt * 10)
+        lastCFrame = lastCFrame + move * (freecamSpeed * dt * 10)
         Camera.CFrame = lastCFrame
     end)
 end
+speedBox.FocusLost:Connect(function(enter)
+    if enter then freecamSpeed = tonumber(speedBox.Text) or 2 end
+end)
 
-function StopFreecam()
-    freecamActive = false
-    Camera.CameraType = Enum.CameraType.Custom
-    pcall(function()
-        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+-- 3. Set Spawn
+local spawnPos
+spawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPos = char.HumanoidRootPart.Position
+        spawnCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
+        spawnInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", spawnPos.X, spawnPos.Y, spawnPos.Z)
+        spawnInfo.TextColor3 = Color3.fromRGB(80,210,80)
+    end
+end)
+player.CharacterAdded:Connect(function(char)
+    wait(0.1)
+    if spawnPos then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
+    end
+end)
+
+-- 4. DiedTP
+local deathPos
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Died:Connect(function()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            deathPos = hrp.Position
+            diedtpCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
+            diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
+            diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
+        end
     end)
-    if camConn then camConn:Disconnect() end
-    if inputConn then inputConn:Disconnect() end
-    if inputEndConn then inputEndConn:Disconnect() end
-    if mouseConn then mouseConn:Disconnect() end
-end
+end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
+    end
+end)
 
--- Toggle Freecam (F)
+-- HOTKEYS
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        if not freecamActive then
-            StartFreecam()
-        else
-            StopFreecam()
-        end
-    end
+    if input.KeyCode == Enum.KeyCode.F then freecamBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.K then spawnBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.G then diedtpBtn:Activate() end
+    if input.KeyCode == Enum.KeyCode.Q then antiflingBtn:Activate() end
 end)
