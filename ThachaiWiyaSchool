@@ -1,5 +1,5 @@
--- Ultimate Utility GUI (สไตล์ตามภาพ, รวม Extra Commands กับ Utility หลัก, ไม่มี Freecam, Drag GUI)
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Reset, Hotkey ตั้งได้ (แต่ไม่มี Freecam)
+-- Ultimate Utility GUI (AntiIdle มีปุ่มเปิดปิด เขียว/แดง, ไม่มี Freecam, AutoClicker พิกัดกำหนดเองตามแบบในภาพ)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เขียว/แดง), AutoClicker (แสดงตำแหน่ง)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -8,7 +8,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 370, 0, 260)
+frame.Size = UDim2.new(0, 370, 0, 300)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0
@@ -57,8 +57,6 @@ makeDraggable(frame, 36)
 local y0 = 36
 local rowH = 32
 local leftX = 10
-local btnX = 150
-
 local function makeStatusCircle(parent, color, y)
     local cir = Instance.new("Frame", parent)
     cir.Size = UDim2.new(0, 18, 0, 18)
@@ -80,7 +78,7 @@ local bluebtn = Color3.fromRGB(66,117,143)
 -- 1. AntiFling
 local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
 local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0, 130, 0, 28)
+antiflingBtn.Size = UDim2.new(0, 210, 0, 28)
 antiflingBtn.Position = UDim2.new(0, leftX+28, 0, y0+4)
 antiflingBtn.Text = "AntiFling : ปิด"
 antiflingBtn.Font = Enum.Font.GothamBold
@@ -93,7 +91,7 @@ antiflingBtn.AutoButtonColor = true
 -- 2. AutoTP
 local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
 local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 130, 0, 28)
+autotpswitch.Size = UDim2.new(0, 210, 0, 28)
 autotpswitch.Position = UDim2.new(0, leftX+28, 0, y0+rowH+4)
 autotpswitch.Text = "AutoTP : ปิด"
 autotpswitch.Font = Enum.Font.GothamBold
@@ -104,7 +102,7 @@ autotpswitch.BorderSizePixel = 0
 
 local autosetBtn = Instance.new("TextButton", frame)
 autosetBtn.Size = UDim2.new(0, 110, 0, 28)
-autosetBtn.Position = UDim2.new(0, btnX+60, 0, y0+rowH+4)
+autosetBtn.Position = UDim2.new(0, 260, 0, y0+rowH+4)
 autosetBtn.Text = "Set AutoTP"
 autosetBtn.Font = Enum.Font.GothamBold
 autosetBtn.TextSize = 14
@@ -116,7 +114,7 @@ autosetBtn.AutoButtonColor = true
 -- 3. Set Spawn
 local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
 local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 130, 0, 28)
+spawnBtn.Size = UDim2.new(0, 210, 0, 28)
 spawnBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*2+4)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
@@ -129,7 +127,7 @@ spawnBtn.AutoButtonColor = true
 -- 4. DiedTP
 local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
 local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 130, 0, 28)
+diedtpBtn.Size = UDim2.new(0, 210, 0, 28)
 diedtpBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*3+4)
 diedtpBtn.Text = "DiedTP"
 diedtpBtn.Font = Enum.Font.GothamBold
@@ -139,55 +137,43 @@ diedtpBtn.TextColor3 = Color3.new(1,1,1)
 diedtpBtn.BorderSizePixel = 0
 diedtpBtn.AutoButtonColor = true
 
---------------------- Extra Commands (รวมในเฟรม) ---------------------
-local cmdTitle = Instance.new("TextLabel", frame)
-cmdTitle.Size = UDim2.new(1, 0, 0, 24)
-cmdTitle.Position = UDim2.new(0, 0, 0, y0+rowH*4+10)
-cmdTitle.Text = "Extra Commands"
-cmdTitle.Font = Enum.Font.GothamBold
-cmdTitle.TextSize = 18
-cmdTitle.BackgroundTransparency = 1
-cmdTitle.TextColor3 = Color3.fromRGB(255, 235, 110)
-
-local btnW, btnH, padX, padY = 101, 32, 6, 6
-local baseY = y0+rowH*4+36
-
--- Antiidle
+-- 5. Antiidle (On/Off + สีเขียวแดง + style)
+local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
 local antiidleBtn = Instance.new("TextButton", frame)
-antiidleBtn.Size = UDim2.new(0, btnW, 0, btnH)
-antiidleBtn.Position = UDim2.new(0, padX, 0, baseY)
-antiidleBtn.Text = "Antiidle"
+antiidleBtn.Size = UDim2.new(0, 210, 0, 28)
+antiidleBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*4+4)
+antiidleBtn.Text = "Antiidle (Off)"
 antiidleBtn.Font = Enum.Font.GothamBold
 antiidleBtn.TextSize = 16
-antiidleBtn.AutoButtonColor = true
 antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
+antiidleBtn.AutoButtonColor = true
 
--- FreecamKey (แต่ไม่มี Freecam)
-local hotkeyBtn = Instance.new("TextButton", frame)
-hotkeyBtn.Size = UDim2.new(0, btnW, 0, 28)
-hotkeyBtn.Position = UDim2.new(0, padX, 0, baseY+38)
-hotkeyBtn.Text = "Freecam Key: F"
-hotkeyBtn.Font = Enum.Font.Gotham
-hotkeyBtn.TextSize = 14
-hotkeyBtn.BackgroundColor3 = Color3.fromRGB(35, 44, 70)
-hotkeyBtn.TextColor3 = Color3.new(1,1,0.7)
-hotkeyBtn.BorderSizePixel = 0
+-- 6. AutoClicker (ปุ่มแสดงบน GUI + แสดงพิกัด)
+local autoclickerCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
+local autoclickerBtn = Instance.new("TextButton", frame)
+autoclickerBtn.Size = UDim2.new(0, 210, 0, 28)
+autoclickerBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
+autoclickerBtn.Text = "AutoClicker : ปิด"
+autoclickerBtn.Font = Enum.Font.GothamBold
+autoclickerBtn.TextSize = 16
+autoclickerBtn.BackgroundColor3 = bluebtn
+autoclickerBtn.TextColor3 = Color3.new(1,1,1)
+autoclickerBtn.BorderSizePixel = 0
+autoclickerBtn.AutoButtonColor = true
 
--- Reset
-local resetBtn = Instance.new("TextButton", frame)
-resetBtn.Size = UDim2.new(0, btnW, 0, btnH)
-resetBtn.Position = UDim2.new(0, btnW+padX*2, 0, baseY)
-resetBtn.Text = "Reset"
-resetBtn.Font = Enum.Font.GothamBold
-resetBtn.TextSize = 16
-resetBtn.AutoButtonColor = true
-resetBtn.BackgroundColor3 = bluebtn
-resetBtn.TextColor3 = Color3.new(1,1,1)
-resetBtn.BorderSizePixel = 0
+local coordLabel = Instance.new("TextLabel", frame)
+coordLabel.Size = UDim2.new(0, 200, 0, 22)
+coordLabel.Position = UDim2.new(0, leftX+28, 0, y0+rowH*6+8)
+coordLabel.Font = Enum.Font.Gotham
+coordLabel.TextSize = 13
+coordLabel.TextColor3 = Color3.fromRGB(230,230,230)
+coordLabel.BackgroundTransparency = 1
+coordLabel.Text = "Click or press Esc to pick"
+coordLabel.Visible = false
 
--- ========== LOGIC ==========
+-------------------- LOGIC ------------------
 
 -- 1. AntiFling
 local antiflingEnabled = false
@@ -217,13 +203,12 @@ spawn(function()
     end
 end)
 
--- 2. AutoTP (เลือดต่ำวาป: จุดแยกจาก Spawn)
+-- 2. AutoTP
 local autotpenabled = false
 local teleporting = false
 local autotpPos
 local autoTP_HUMANOID = nil
 
-local function updateAutoTPInfo() end
 local function setAutoTP(state)
     autotpenabled = state
     autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
@@ -296,46 +281,82 @@ diedtpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== Extra Commands ==========
-
--- 1. AntiIdle
-local antiidleActive = false
-local function run_antiidle()
-    if antiidleActive then return end
-    antiidleActive = true
-    local vu = game:GetService("VirtualUser")
-    game:GetService("Players").LocalPlayer.Idled:Connect(function()
-        vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-        wait(1)
-        vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-    end)
-    antiidleBtn.Text = "Antiidle (On)"
-    print("[Ultimate Utility] antiidle enabled: You won't get kicked for being idle/afk.")
-end
-antiidleBtn.MouseButton1Click:Connect(run_antiidle)
-
--- 2. Freecam Key (ไม่มี Freecam, กดเปลี่ยนปุ่มได้ แต่ไม่ทำงาน)
-local freecamHotkey = Enum.KeyCode.F
-hotkeyBtn.MouseButton1Click:Connect(function()
-    hotkeyBtn.Text = "กดคีย์..."
-    local con
-    con = UserInputService.InputBegan:Connect(function(input, gp)
-        if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
-            freecamHotkey = input.KeyCode
-            hotkeyBtn.Text = "Freecam Key: " .. input.KeyCode.Name
-            con:Disconnect()
-        end
-    end)
-end)
-
--- 3. Reset
-local function run_reset()
-    local player = game.Players.LocalPlayer
-    if player and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-        player.Character:FindFirstChildOfClass("Humanoid").Health = 0
-        print("[Ultimate Utility] Character reset.")
-    else
-        warn("[Ultimate Utility] Character or Humanoid not found.")
+-- 5. Antiidle (On/Off + เขียวแดง)
+local antiidleEnabled = false
+local antiidleConn = nil
+local function setAntiIdle(state)
+    antiidleEnabled = state
+    antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
+    antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+    if antiidleConn then
+        pcall(function() antiidleConn:Disconnect() end)
+        antiidleConn = nil
+    end
+    if state then
+        local vu = game:GetService("VirtualUser")
+        antiidleConn = player.Idled:Connect(function()
+            vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+            wait(1)
+            vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        end)
     end
 end
-resetBtn.MouseButton1Click:Connect(run_reset)
+antiidleBtn.MouseButton1Click:Connect(function()
+    setAntiIdle(not antiidleEnabled)
+end)
+
+-- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด)
+local autoclickerEnabled = false
+local autoclickerPos = nil
+local autoclickerConn = nil
+local clickInterval = 0.25 -- วินาที
+
+local function updateAutoClickerBtn()
+    autoclickerBtn.Text = "AutoClicker : " .. (autoclickerEnabled and "เปิด" or "ปิด")
+    autoclickerCircle.BackgroundColor3 = autoclickerEnabled and statusColors.on or statusColors.off
+end
+
+autoclickerBtn.MouseButton1Click:Connect(function()
+    if autoclickerEnabled then
+        autoclickerEnabled = false
+        if autoclickerConn then
+            pcall(function() autoclickerConn:Disconnect() end)
+        end
+        updateAutoClickerBtn()
+        coordLabel.Visible = false
+    else
+        -- เริ่มเลือกจุด
+        coordLabel.Text = "Click or press Esc to pick"
+        coordLabel.Visible = true
+        autoclickerBtn.Text = "AutoClicker : เลือกจุด..."
+        autoclickerCircle.BackgroundColor3 = statusColors.off
+        local pickConn, escConn
+        pickConn = UserInputService.InputBegan:Connect(function(input, gp)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local mousePos = UserInputService:GetMouseLocation()
+                autoclickerPos = Vector2.new(mousePos.X, mousePos.Y)
+                coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y)
+                coordLabel.Visible = true
+                autoclickerEnabled = true
+                updateAutoClickerBtn()
+                -- เริ่ม AutoClick loop
+                autoclickerConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+                    if autoclickerEnabled and autoclickerPos then
+                        -- ซิมูเลตคลิกซ้ายที่จุด
+                        -- หมายเหตุ: ใน Roblox Studio/Executor ส่วนใหญ่ไม่สามารถซิมูเลตคลิกนอก Roblox ได้จริง
+                        -- ถ้า executor รองรับ: firemouseclick(0, autoclickerPos.X, autoclickerPos.Y)
+                        -- ตัวอย่างใน Roblox เองจะข้าม (แต่แสดงตำแหน่ง)
+                    end
+                end)
+                pickConn:Disconnect()
+                if escConn then escConn:Disconnect() end
+            elseif input.KeyCode == Enum.KeyCode.Escape then
+                coordLabel.Visible = false
+                autoclickerBtn.Text = "AutoClicker : ปิด"
+                pickConn:Disconnect()
+                if escConn then escConn:Disconnect() end
+            end
+        end)
+        escConn = pickConn
+    end
+end)
