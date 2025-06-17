@@ -1,6 +1,6 @@
--- Stand Power GUI + Infinite Yield Style Autoclick Integration (ทุกฟีเจอร์ปกติ + ขนาดย่อสวยงาม)
+-- Stand Power GUI + Ultimate Utility GUI (ตัดช่อง autoclick bar ออกตามภาพ)
 -- หัว GUI: STAND (เหลือง) + POWER (ม่วง) แบบ 2 บรรทัด
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Autoclick Command (autoclick/unautoclick/noautoclick)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (ไม่มีช่องพิมพ์ autoclick)
 -- ไม่มี Screen Tap
 
 local player = game.Players.LocalPlayer
@@ -8,33 +8,33 @@ local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "StandPowerGUI"
 gui.ResetOnSpawn = false
 
---------------------- Compact Main Stand Power Frame ---------------------
+--------------------- Main Stand Power Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 320, 0, 310)
-frame.Position = UDim2.new(0, 60, 0, 100)
+frame.Size = UDim2.new(0, 390, 0, 430)
+frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
 
 -- STAND POWER Header (สองบรรทัด สองสี)
 local standLabel = Instance.new("TextLabel", frame)
-standLabel.Size = UDim2.new(1, 0, 0, 30)
-standLabel.Position = UDim2.new(0, 0, 0, 4)
+standLabel.Size = UDim2.new(1, 0, 0, 38)
+standLabel.Position = UDim2.new(0, 0, 0, 0)
 standLabel.BackgroundTransparency = 1
 standLabel.Font = Enum.Font.GothamBlack
-standLabel.TextSize = 24
-standLabel.TextColor3 = Color3.fromRGB(255, 215, 48)
+standLabel.TextSize = 34
+standLabel.TextColor3 = Color3.fromRGB(255, 215, 48) -- เหลืองทอง
 standLabel.TextStrokeTransparency = 0.7
 standLabel.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
 standLabel.Text = "STAND"
 standLabel.TextYAlignment = Enum.TextYAlignment.Top
 
 local powerLabel = Instance.new("TextLabel", frame)
-powerLabel.Size = UDim2.new(1, 0, 0, 32)
-powerLabel.Position = UDim2.new(0, 0, 0, 26)
+powerLabel.Size = UDim2.new(1, 0, 0, 38)
+powerLabel.Position = UDim2.new(0, 0, 0, 30)
 powerLabel.BackgroundTransparency = 1
 powerLabel.Font = Enum.Font.GothamBlack
-powerLabel.TextSize = 24
-powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255)
+powerLabel.TextSize = 34
+powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255) -- ม่วงสด
 powerLabel.TextStrokeTransparency = 0.7
 powerLabel.TextStrokeColor3 = Color3.fromRGB(60, 0, 90)
 powerLabel.Text = "POWER"
@@ -64,15 +64,15 @@ local function makeDraggable(target, ybar)
         end
     end)
 end
-makeDraggable(frame, 30)
+makeDraggable(frame, 38)
 
-local y0 = 62
-local rowH = 28
+local y0 = 68
+local rowH = 32
 local leftX = 10
 local function makeStatusCircle(parent, color, y)
     local cir = Instance.new("Frame", parent)
-    cir.Size = UDim2.new(0, 14, 0, 14)
-    cir.Position = UDim2.new(0, leftX, 0, y+6)
+    cir.Size = UDim2.new(0, 18, 0, 18)
+    cir.Position = UDim2.new(0, leftX, 0, y+7)
     cir.BackgroundColor3 = color
     cir.BorderSizePixel = 0
     cir.Name = "StatusCircle"
@@ -90,11 +90,11 @@ local bluebtn = Color3.fromRGB(66,117,143)
 -- 1. AntiFling
 local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
 local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0, 145, 0, 24)
-antiflingBtn.Position = UDim2.new(0, leftX+20, 0, y0+2)
+antiflingBtn.Size = UDim2.new(0, 210, 0, 28)
+antiflingBtn.Position = UDim2.new(0, leftX+28, 0, y0+4)
 antiflingBtn.Text = "AntiFling : ปิด"
 antiflingBtn.Font = Enum.Font.GothamBold
-antiflingBtn.TextSize = 14
+antiflingBtn.TextSize = 16
 antiflingBtn.BackgroundColor3 = darkbtn
 antiflingBtn.TextColor3 = Color3.new(1,1,1)
 antiflingBtn.BorderSizePixel = 0
@@ -102,21 +102,20 @@ antiflingBtn.BorderSizePixel = 0
 -- 2. AutoTP
 local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
 local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 145, 0, 24)
-autotpswitch.Position = UDim2.new(0, leftX+20, 0, y0+rowH+2)
+autotpswitch.Size = UDim2.new(0, 210, 0, 28)
+autotpswitch.Position = UDim2.new(0, leftX+28, 0, y0+rowH+4)
 autotpswitch.Text = "AutoTP : ปิด"
 autotpswitch.Font = Enum.Font.GothamBold
-autotpswitch.TextSize = 14
+autotpswitch.TextSize = 16
 autotpswitch.BackgroundColor3 = darkbtn
 autotpswitch.TextColor3 = Color3.new(1,1,1)
 autotpswitch.BorderSizePixel = 0
-
 local autosetBtn = Instance.new("TextButton", frame)
-autosetBtn.Size = UDim2.new(0, 90, 0, 24)
-autosetBtn.Position = UDim2.new(0, leftX+20+145+8, 0, y0+rowH+2)
+autosetBtn.Size = UDim2.new(0, 110, 0, 28)
+autosetBtn.Position = UDim2.new(0, 260, 0, y0+rowH+4)
 autosetBtn.Text = "Set AutoTP"
 autosetBtn.Font = Enum.Font.GothamBold
-autosetBtn.TextSize = 13
+autosetBtn.TextSize = 14
 autosetBtn.BackgroundColor3 = bluebtn
 autosetBtn.TextColor3 = Color3.new(1,1,1)
 autosetBtn.BorderSizePixel = 0
@@ -124,11 +123,11 @@ autosetBtn.BorderSizePixel = 0
 -- 3. Set Spawn
 local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
 local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 145, 0, 24)
-spawnBtn.Position = UDim2.new(0, leftX+20, 0, y0+rowH*2+2)
+spawnBtn.Size = UDim2.new(0, 210, 0, 28)
+spawnBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*2+4)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
-spawnBtn.TextSize = 14
+spawnBtn.TextSize = 16
 spawnBtn.BackgroundColor3 = darkbtn
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 spawnBtn.BorderSizePixel = 0
@@ -136,11 +135,11 @@ spawnBtn.BorderSizePixel = 0
 -- 4. DiedTP
 local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
 local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 145, 0, 24)
-diedtpBtn.Position = UDim2.new(0, leftX+20, 0, y0+rowH*3+2)
+diedtpBtn.Size = UDim2.new(0, 210, 0, 28)
+diedtpBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*3+4)
 diedtpBtn.Text = "DiedTP"
 diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 14
+diedtpBtn.TextSize = 16
 diedtpBtn.BackgroundColor3 = darkbtn
 diedtpBtn.TextColor3 = Color3.new(1,1,1)
 diedtpBtn.BorderSizePixel = 0
@@ -148,46 +147,14 @@ diedtpBtn.BorderSizePixel = 0
 -- 5. Antiidle
 local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
 local antiidleBtn = Instance.new("TextButton", frame)
-antiidleBtn.Size = UDim2.new(0, 145, 0, 24)
-antiidleBtn.Position = UDim2.new(0, leftX+20, 0, y0+rowH*4+2)
+antiidleBtn.Size = UDim2.new(0, 210, 0, 28)
+antiidleBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*4+4)
 antiidleBtn.Text = "Antiidle (Off)"
 antiidleBtn.Font = Enum.Font.GothamBold
-antiidleBtn.TextSize = 14
+antiidleBtn.TextSize = 16
 antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
-
--- 6. Autoclick Command Bar (Infinite Yield style)
-local autoclickLabel = Instance.new("TextLabel", frame)
-autoclickLabel.Size = UDim2.new(0, 285, 0, 18)
-autoclickLabel.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+6)
-autoclickLabel.BackgroundTransparency = 1
-autoclickLabel.Font = Enum.Font.Gotham
-autoclickLabel.TextSize = 13
-autoclickLabel.TextColor3 = Color3.fromRGB(255, 235, 110)
-autoclickLabel.Text = "autoclick [click delay] [release delay] | unautoclick/noautoclick"
-autoclickLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local autoclickBar = Instance.new("TextBox", frame)
-autoclickBar.Size = UDim2.new(0, 235, 0, 20)
-autoclickBar.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+26)
-autoclickBar.Font = Enum.Font.Gotham
-autoclickBar.TextSize = 13
-autoclickBar.TextColor3 = Color3.fromRGB(200, 255, 200)
-autoclickBar.PlaceholderText = "autoclick 0.1 0.1 หรือ unautoclick"
-autoclickBar.ClearTextOnFocus = false
-autoclickBar.BackgroundColor3 = Color3.fromRGB(47,52,65)
-autoclickBar.Text = ""
-autoclickBar.BorderSizePixel = 0
-
-local autoclickStatus = Instance.new("TextLabel", frame)
-autoclickStatus.Size = UDim2.new(0, 235, 0, 15)
-autoclickStatus.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+49)
-autoclickStatus.Font = Enum.Font.Gotham
-autoclickStatus.TextSize = 12
-autoclickStatus.TextColor3 = Color3.fromRGB(200, 255, 200)
-autoclickStatus.BackgroundTransparency = 1
-autoclickStatus.Text = ""
 
 -------------------- LOGIC (Utility) ------------------
 
@@ -303,58 +270,5 @@ local function setAntiIdle(state)
     end
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
-
--- 6. Autoclick (Infinite Yield style logic)
-local autoclick_enabled = false
-local autoclick_conn = nil
-
-local function start_autoclick(click_delay, release_delay)
-    if autoclick_conn then autoclick_conn:Disconnect() autoclick_conn = nil end
-    autoclick_enabled = true
-    autoclickStatus.Text = string.format("AutoClick ON | click: %.2fs | release: %.2fs", click_delay, release_delay)
-
-    autoclick_conn = game:GetService("RunService").RenderStepped:Connect(function()
-        if not autoclick_enabled then return end
-        -- ถ้า executor รองรับ mouse1press/mouse1release ให้ใช้แทน code นี้
-        -- mouse1press()
-        -- wait(click_delay)
-        -- mouse1release()
-        -- wait(release_delay)
-        -- (ถ้า executor ทั่วไป ให้ใช้ UserInputService แต่บางเกม/pc จะไม่รองรับ)
-        pcall(function()
-            UserInputService.InputBegan:Fire({UserInputType=Enum.UserInputType.MouseButton1, UserInputState=Enum.UserInputState.Begin})
-            wait(click_delay)
-            UserInputService.InputEnded:Fire({UserInputType=Enum.UserInputType.MouseButton1, UserInputState=Enum.UserInputState.End})
-            wait(release_delay)
-        end)
-    end)
-end
-
-local function stop_autoclick()
-    autoclick_enabled = false
-    if autoclick_conn then autoclick_conn:Disconnect() autoclick_conn = nil end
-    autoclickStatus.Text = "AutoClick OFF"
-end
-
-local function parseAutoclickCommand(cmdstr)
-    local args = {}
-    for word in string.gmatch(cmdstr, "%S+") do table.insert(args, word) end
-    if #args == 0 then return end
-    local cmd = args[1]:lower()
-    if cmd == "autoclick" then
-        local click_delay = tonumber(args[2]) or 0.1
-        local release_delay = tonumber(args[3]) or 0.1
-        start_autoclick(click_delay, release_delay)
-    elseif cmd == "unautoclick" or cmd == "noautoclick" then
-        stop_autoclick()
-    end
-end
-
-autoclickBar.FocusLost:Connect(function(enter)
-    if enter then
-        parseAutoclickCommand(autoclickBar.Text)
-        autoclickBar.Text = ""
-    end
-end)
 
 -------------------- End of Script --------------------
