@@ -1,27 +1,26 @@
--- Stand Power GUI + Ultimate Utility GUI + Infinite Yield Style Autoclick Integration (ตัดส่วน autoclick bar + label + status ออก)
+-- Stand Power GUI (Compact Style) - ย่อขนาด & ระยะห่างให้เหมาะสม ดูดีแบบตัวอย่าง
 -- หัว GUI: STAND (เหลือง) + POWER (ม่วง) แบบ 2 บรรทัด
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Autoclick Command (แต่ไม่มีช่องพิมพ์ autoclick)
--- ไม่มี Screen Tap
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (ไม่มี autoclick bar)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "StandPowerGUI"
 gui.ResetOnSpawn = false
 
---------------------- Main Stand Power Frame ---------------------
+--------------------- Compact Stand Power Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 430)
-frame.Position = UDim2.new(0, 40, 0, 110)
+frame.Size = UDim2.new(0, 330, 0, 300)
+frame.Position = UDim2.new(0, 60, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
 
--- STAND POWER Header (สองบรรทัด สองสี)
+-- STAND POWER Header (สองบรรทัด สองสี) (เปลี่ยน "ยืน" เป็น "STAND")
 local standLabel = Instance.new("TextLabel", frame)
-standLabel.Size = UDim2.new(1, 0, 0, 38)
-standLabel.Position = UDim2.new(0, 0, 0, 0)
+standLabel.Size = UDim2.new(1, 0, 0, 34)
+standLabel.Position = UDim2.new(0, 0, 0, 4)
 standLabel.BackgroundTransparency = 1
 standLabel.Font = Enum.Font.GothamBlack
-standLabel.TextSize = 34
+standLabel.TextSize = 28
 standLabel.TextColor3 = Color3.fromRGB(255, 215, 48) -- เหลืองทอง
 standLabel.TextStrokeTransparency = 0.7
 standLabel.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
@@ -29,49 +28,27 @@ standLabel.Text = "STAND"
 standLabel.TextYAlignment = Enum.TextYAlignment.Top
 
 local powerLabel = Instance.new("TextLabel", frame)
-powerLabel.Size = UDim2.new(1, 0, 0, 38)
+powerLabel.Size = UDim2.new(1, 0, 0, 34)
 powerLabel.Position = UDim2.new(0, 0, 0, 30)
 powerLabel.BackgroundTransparency = 1
 powerLabel.Font = Enum.Font.GothamBlack
-powerLabel.TextSize = 34
+powerLabel.TextSize = 28
 powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255) -- ม่วงสด
 powerLabel.TextStrokeTransparency = 0.7
 powerLabel.TextStrokeColor3 = Color3.fromRGB(60, 0, 90)
 powerLabel.Text = "POWER"
 powerLabel.TextYAlignment = Enum.TextYAlignment.Top
 
--- Drag GUI
-local UserInputService = game:GetService("UserInputService")
-local function makeDraggable(target, ybar)
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-    target.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.Y - target.AbsolutePosition.Y < ybar then
-            dragging = true
-            dragStart = input.Position
-            startPos = target.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-    target.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-makeDraggable(frame, 38)
-
-local y0 = 68
+-- ขนาดและระยะห่างใหม่ (ดูดีขึ้น)
+local y0 = 70
 local rowH = 32
-local leftX = 10
+local leftX = 14
+local btnW, btnH = 170, 30
+local btnFontSize = 17
+
 local function makeStatusCircle(parent, color, y)
     local cir = Instance.new("Frame", parent)
-    cir.Size = UDim2.new(0, 18, 0, 18)
+    cir.Size = UDim2.new(0, 16, 0, 16)
     cir.Position = UDim2.new(0, leftX, 0, y+7)
     cir.BackgroundColor3 = color
     cir.BorderSizePixel = 0
@@ -90,11 +67,11 @@ local bluebtn = Color3.fromRGB(66,117,143)
 -- 1. AntiFling
 local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
 local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0, 210, 0, 28)
-antiflingBtn.Position = UDim2.new(0, leftX+28, 0, y0+4)
+antiflingBtn.Size = UDim2.new(0, btnW, 0, btnH)
+antiflingBtn.Position = UDim2.new(0, leftX+26, 0, y0+2)
 antiflingBtn.Text = "AntiFling : ปิด"
 antiflingBtn.Font = Enum.Font.GothamBold
-antiflingBtn.TextSize = 16
+antiflingBtn.TextSize = btnFontSize
 antiflingBtn.BackgroundColor3 = darkbtn
 antiflingBtn.TextColor3 = Color3.new(1,1,1)
 antiflingBtn.BorderSizePixel = 0
@@ -102,20 +79,21 @@ antiflingBtn.BorderSizePixel = 0
 -- 2. AutoTP
 local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
 local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 210, 0, 28)
-autotpswitch.Position = UDim2.new(0, leftX+28, 0, y0+rowH+4)
+autotpswitch.Size = UDim2.new(0, btnW, 0, btnH)
+autotpswitch.Position = UDim2.new(0, leftX+26, 0, y0+rowH+2)
 autotpswitch.Text = "AutoTP : ปิด"
 autotpswitch.Font = Enum.Font.GothamBold
-autotpswitch.TextSize = 16
+autotpswitch.TextSize = btnFontSize
 autotpswitch.BackgroundColor3 = darkbtn
 autotpswitch.TextColor3 = Color3.new(1,1,1)
 autotpswitch.BorderSizePixel = 0
+
 local autosetBtn = Instance.new("TextButton", frame)
-autosetBtn.Size = UDim2.new(0, 110, 0, 28)
-autosetBtn.Position = UDim2.new(0, 260, 0, y0+rowH+4)
+autosetBtn.Size = UDim2.new(0, 110, 0, btnH)
+autosetBtn.Position = UDim2.new(0, leftX+26+btnW+12, 0, y0+rowH+2)
 autosetBtn.Text = "Set AutoTP"
 autosetBtn.Font = Enum.Font.GothamBold
-autosetBtn.TextSize = 14
+autosetBtn.TextSize = 15
 autosetBtn.BackgroundColor3 = bluebtn
 autosetBtn.TextColor3 = Color3.new(1,1,1)
 autosetBtn.BorderSizePixel = 0
@@ -123,11 +101,11 @@ autosetBtn.BorderSizePixel = 0
 -- 3. Set Spawn
 local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
 local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 210, 0, 28)
-spawnBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*2+4)
+spawnBtn.Size = UDim2.new(0, btnW, 0, btnH)
+spawnBtn.Position = UDim2.new(0, leftX+26, 0, y0+rowH*2+2)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
-spawnBtn.TextSize = 16
+spawnBtn.TextSize = btnFontSize
 spawnBtn.BackgroundColor3 = darkbtn
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 spawnBtn.BorderSizePixel = 0
@@ -135,11 +113,11 @@ spawnBtn.BorderSizePixel = 0
 -- 4. DiedTP
 local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
 local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 210, 0, 28)
-diedtpBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*3+4)
+diedtpBtn.Size = UDim2.new(0, btnW, 0, btnH)
+diedtpBtn.Position = UDim2.new(0, leftX+26, 0, y0+rowH*3+2)
 diedtpBtn.Text = "DiedTP"
 diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 16
+diedtpBtn.TextSize = btnFontSize
 diedtpBtn.BackgroundColor3 = darkbtn
 diedtpBtn.TextColor3 = Color3.new(1,1,1)
 diedtpBtn.BorderSizePixel = 0
@@ -147,120 +125,24 @@ diedtpBtn.BorderSizePixel = 0
 -- 5. Antiidle
 local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
 local antiidleBtn = Instance.new("TextButton", frame)
-antiidleBtn.Size = UDim2.new(0, 210, 0, 28)
-antiidleBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*4+4)
+antiidleBtn.Size = UDim2.new(0, btnW, 0, btnH)
+antiidleBtn.Position = UDim2.new(0, leftX+26, 0, y0+rowH*4+2)
 antiidleBtn.Text = "Antiidle (Off)"
 antiidleBtn.Font = Enum.Font.GothamBold
-antiidleBtn.TextSize = 16
+antiidleBtn.TextSize = btnFontSize
 antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 
--------------------- LOGIC (Utility) ------------------
-
--- 1. AntiFling
-local antiflingEnabled = false
-local function setAntiFling(state)
-    antiflingEnabled = state
-    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
-    antiflingCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-end
-antiflingBtn.MouseButton1Click:Connect(function() setAntiFling(not antiflingEnabled) end)
-spawn(function()
-    while true do
-        task.wait(0.2)
-        if antiflingEnabled then
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local hrp = char.HumanoidRootPart
-                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                end
-                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
-                    hrp.RotVelocity = Vector3.new(0, 0, 0)
-                end
-            end
-        end
-    end
-end)
-
--- 2. AutoTP
-local autotpenabled = false
-local teleporting = false
-local autotpPos
-local autoTP_HUMANOID = nil
-local function setAutoTP(state)
-    autotpenabled = state
-    autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
-    autotpcircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-end
-autotpswitch.MouseButton1Click:Connect(function() setAutoTP(not autotpenabled) end)
-autosetBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        autotpPos = char.HumanoidRootPart.Position
-    end
-end)
-
--- 3. Set Spawn
-local spawnPos
-spawnBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        spawnPos = char.HumanoidRootPart.Position
-        spawnCircle.BackgroundColor3 = statusColors.on
-    end
-end)
-player.CharacterAdded:Connect(function(char)
-    if spawnPos then
-        local hrp = char:WaitForChild("HumanoidRootPart", 3)
-        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
-    end
-    if autoTP_HUMANOID then pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end) end
-    autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
-    if autoTP_HUMANOID then
-        autoTP_HUMANOID.HealthChanged:Connect(function(health)
-            if autotpenabled and autotpPos and health > 0 and (health / autoTP_HUMANOID.MaxHealth) <= 0.1 and not teleporting and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead then
-                teleporting = true
-                local c = player.Character
-                if c and c:FindFirstChild("HumanoidRootPart") then c.HumanoidRootPart.CFrame = CFrame.new(autotpPos) end
-                wait(0.5)
-                teleporting = false
-            end
-        end)
-    end
-end)
-
--- 4. DiedTP
-local deathPos = nil
-player.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid")
-    local diedFlag = false
-    hum.Died:Connect(function() diedFlag = true end)
-    game:GetService("RunService").Stepped:Connect(function()
-        if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
-            deathPos = char.HumanoidRootPart.Position
-            diedtpCircle.BackgroundColor3 = statusColors.on
-            diedFlag = false
-        end
-    end)
-end)
-diedtpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
-    end
-end)
-
--- 5. AntiIdle
+-------------------- LOGIC (เฉพาะตัวอย่างปุ่ม Antiidle) ------------------
 local antiidleEnabled = false
 local antiidleConn = nil
-local function setAntiIdle(state)
-    antiidleEnabled = state
-    antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
-    antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
+antiidleBtn.MouseButton1Click:Connect(function()
+    antiidleEnabled = not antiidleEnabled
+    antiidleBtn.Text = "Antiidle ("..(antiidleEnabled and "On" or "Off")..")"
+    antiidleCircle.BackgroundColor3 = antiidleEnabled and statusColors.on or statusColors.off
     if antiidleConn then pcall(function() antiidleConn:Disconnect() end) antiidleConn = nil end
-    if state then
+    if antiidleEnabled then
         local vu = game:GetService("VirtualUser")
         antiidleConn = player.Idled:Connect(function()
             vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
@@ -268,7 +150,4 @@ local function setAntiIdle(state)
             vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
         end)
     end
-end
-antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
-
--------------------- End of Script --------------------
+end)
