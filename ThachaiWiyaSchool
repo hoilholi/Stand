@@ -1,21 +1,19 @@
--- Ultimate Utility GUI (รวม AutoClicker ใช้ Python script ClickerBot.py)
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิดปิด), AutoClicker (เลือกพิกัด, ปุ่มเปิดปิด, ปรับดีเลย์, เรียก Python)
--- หมายเหตุ: ส่วน AutoClicker จะเรียก Python script ผ่าน os.execute หรือ io.popen (เฉพาะ Windows/Executor ที่รองรับ)
+-- Ultimate Utility GUI + OP Auto Clicker Integration (สำหรับใช้งานร่วมกับ OP Auto Clicker 3.0 แบบในภาพ ![image6](image6))
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิด/ปิด), AutoClicker (เลือก/โชว์พิกัด, กด copy ไป clipboard เพื่อใส่ใน OP Auto Clicker)
+-- หมายเหตุ: Roblox ไม่สามารถคลิกเมาส์จริงๆ ได้ ต้องใช้ OP Auto Clicker ภายนอกตามภาพ
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
--- Main Utility Frame
+-- ---------- Frame & Style ----------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 340)
+frame.Size = UDim2.new(0, 390, 0, 350)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
-frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
 
--- Title bar
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 36)
 title.Position = UDim2.new(0, 0, 0, 0)
@@ -35,16 +33,12 @@ local function makeDraggable(target, ybar)
             dragStart = input.Position
             startPos = target.Position
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
         end
     end)
     target.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
@@ -76,6 +70,7 @@ local statusColors = {
 local darkbtn = Color3.fromRGB(47,52,65)
 local bluebtn = Color3.fromRGB(66,117,143)
 
+-- ---------- Utility Buttons ----------
 -- 1. AntiFling
 local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
 local antiflingBtn = Instance.new("TextButton", frame)
@@ -87,7 +82,6 @@ antiflingBtn.TextSize = 16
 antiflingBtn.BackgroundColor3 = darkbtn
 antiflingBtn.TextColor3 = Color3.new(1,1,1)
 antiflingBtn.BorderSizePixel = 0
-antiflingBtn.AutoButtonColor = true
 
 -- 2. AutoTP
 local autotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
@@ -100,7 +94,6 @@ autotpswitch.TextSize = 16
 autotpswitch.BackgroundColor3 = darkbtn
 autotpswitch.TextColor3 = Color3.new(1,1,1)
 autotpswitch.BorderSizePixel = 0
-
 local autosetBtn = Instance.new("TextButton", frame)
 autosetBtn.Size = UDim2.new(0, 110, 0, 28)
 autosetBtn.Position = UDim2.new(0, 260, 0, y0+rowH+4)
@@ -110,7 +103,6 @@ autosetBtn.TextSize = 14
 autosetBtn.BackgroundColor3 = bluebtn
 autosetBtn.TextColor3 = Color3.new(1,1,1)
 autosetBtn.BorderSizePixel = 0
-autosetBtn.AutoButtonColor = true
 
 -- 3. Set Spawn
 local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
@@ -123,7 +115,6 @@ spawnBtn.TextSize = 16
 spawnBtn.BackgroundColor3 = darkbtn
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 spawnBtn.BorderSizePixel = 0
-spawnBtn.AutoButtonColor = true
 
 -- 4. DiedTP
 local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
@@ -136,9 +127,8 @@ diedtpBtn.TextSize = 16
 diedtpBtn.BackgroundColor3 = darkbtn
 diedtpBtn.TextColor3 = Color3.new(1,1,1)
 diedtpBtn.BorderSizePixel = 0
-diedtpBtn.AutoButtonColor = true
 
--- 5. Antiidle (On/Off + สีเขียวแดง + style)
+-- 5. Antiidle
 local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
 local antiidleBtn = Instance.new("TextButton", frame)
 antiidleBtn.Size = UDim2.new(0, 210, 0, 28)
@@ -149,9 +139,8 @@ antiidleBtn.TextSize = 16
 antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
-antiidleBtn.AutoButtonColor = true
 
--- 6. AutoClicker: ปุ่มเลือกตำแหน่ง, ปุ่มเริ่มหยุด, ดีเลย์
+-- 6. AutoClicker (เลือกพิกัด, copy ไป clipboard, กรอกใน OP Auto Clicker)
 local autoclickerCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
 local autoclickerPickBtn = Instance.new("TextButton", frame)
 autoclickerPickBtn.Size = UDim2.new(0, 110, 0, 28)
@@ -162,18 +151,6 @@ autoclickerPickBtn.TextSize = 15
 autoclickerPickBtn.BackgroundColor3 = bluebtn
 autoclickerPickBtn.TextColor3 = Color3.new(1,1,1)
 autoclickerPickBtn.BorderSizePixel = 0
-autoclickerPickBtn.AutoButtonColor = true
-
-local autoclickerStartBtn = Instance.new("TextButton", frame)
-autoclickerStartBtn.Size = UDim2.new(0, 90, 0, 28)
-autoclickerStartBtn.Position = UDim2.new(0, leftX+150, 0, y0+rowH*5+4)
-autoclickerStartBtn.Text = "AutoClick: ปิด"
-autoclickerStartBtn.Font = Enum.Font.GothamBold
-autoclickerStartBtn.TextSize = 15
-autoclickerStartBtn.BackgroundColor3 = darkbtn
-autoclickerStartBtn.TextColor3 = Color3.new(1,1,1)
-autoclickerStartBtn.BorderSizePixel = 0
-autoclickerStartBtn.AutoButtonColor = true
 
 local coordLabel = Instance.new("TextLabel", frame)
 coordLabel.Size = UDim2.new(0, 200, 0, 22)
@@ -185,27 +162,7 @@ coordLabel.BackgroundTransparency = 1
 coordLabel.Text = "Click or press Esc to pick"
 coordLabel.Visible = false
 
-local delayLabel = Instance.new("TextLabel", frame)
-delayLabel.Size = UDim2.new(0, 40, 0, 22)
-delayLabel.Position = UDim2.new(0, leftX+28, 0, y0+rowH*6+38)
-delayLabel.Text = "Delay"
-delayLabel.Font = Enum.Font.Gotham
-delayLabel.TextSize = 13
-delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
-delayLabel.BackgroundTransparency = 1
-
-local delayBox = Instance.new("TextBox", frame)
-delayBox.Size = UDim2.new(0, 60, 0, 22)
-delayBox.Position = UDim2.new(0, leftX+70, 0, y0+rowH*6+38)
-delayBox.Text = "0.25"
-delayBox.TextColor3 = Color3.fromRGB(0,0,0)
-delayBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
-delayBox.Font = Enum.Font.Gotham
-delayBox.TextSize = 13
-delayBox.BorderSizePixel = 0
-
--------------------- LOGIC ------------------
-
+-- ---------- LOGIC: Utility ----------
 -- 1. AntiFling
 local antiflingEnabled = false
 local function setAntiFling(state)
@@ -213,9 +170,7 @@ local function setAntiFling(state)
     antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
     antiflingCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
 end
-antiflingBtn.MouseButton1Click:Connect(function()
-    setAntiFling(not antiflingEnabled)
-end)
+antiflingBtn.MouseButton1Click:Connect(function() setAntiFling(not antiflingEnabled) end)
 spawn(function()
     while true do
         task.wait(0.2)
@@ -239,15 +194,12 @@ local autotpenabled = false
 local teleporting = false
 local autotpPos
 local autoTP_HUMANOID = nil
-
 local function setAutoTP(state)
     autotpenabled = state
     autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
     autotpcircle.BackgroundColor3 = state and statusColors.on or statusColors.off
 end
-autotpswitch.MouseButton1Click:Connect(function()
-    setAutoTP(not autotpenabled)
-end)
+autotpswitch.MouseButton1Click:Connect(function() setAutoTP(not autotpenabled) end)
 autosetBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -270,18 +222,14 @@ player.CharacterAdded:Connect(function(char)
         if hrp then hrp.CFrame = CFrame.new(spawnPos) end
     end
     -- Setup AutoTP ใหม่ทุกครั้งที่เกิด
-    if autoTP_HUMANOID then
-        pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end)
-    end
+    if autoTP_HUMANOID then pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end) end
     autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
     if autoTP_HUMANOID then
         autoTP_HUMANOID.HealthChanged:Connect(function(health)
             if autotpenabled and autotpPos and health > 0 and (health / autoTP_HUMANOID.MaxHealth) <= 0.1 and not teleporting and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead then
                 teleporting = true
                 local c = player.Character
-                if c and c:FindFirstChild("HumanoidRootPart") then
-                    c.HumanoidRootPart.CFrame = CFrame.new(autotpPos)
-                end
+                if c and c:FindFirstChild("HumanoidRootPart") then c.HumanoidRootPart.CFrame = CFrame.new(autotpPos) end
                 wait(0.5)
                 teleporting = false
             end
@@ -294,9 +242,7 @@ local deathPos = nil
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
     local diedFlag = false
-    hum.Died:Connect(function()
-        diedFlag = true
-    end)
+    hum.Died:Connect(function() diedFlag = true end)
     game:GetService("RunService").Stepped:Connect(function()
         if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
             deathPos = char.HumanoidRootPart.Position
@@ -312,17 +258,14 @@ diedtpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 5. Antiidle (On/Off + เขียวแดง)
+-- 5. AntiIdle
 local antiidleEnabled = false
 local antiidleConn = nil
 local function setAntiIdle(state)
     antiidleEnabled = state
     antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
     antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-    if antiidleConn then
-        pcall(function() antiidleConn:Disconnect() end)
-        antiidleConn = nil
-    end
+    if antiidleConn then pcall(function() antiidleConn:Disconnect() end) antiidleConn = nil end
     if state then
         local vu = game:GetService("VirtualUser")
         antiidleConn = player.Idled:Connect(function()
@@ -332,40 +275,26 @@ local function setAntiIdle(state)
         end)
     end
 end
-antiidleBtn.MouseButton1Click:Connect(function()
-    setAntiIdle(not antiidleEnabled)
-end)
+antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด + ปรับดีเลย์/เรียก Python)
-local autoclickerEnabled = false
+-- 6. AutoClicker for OP Auto Clicker (choose pos, copy to clipboard for user to paste)
 local autoclickerPos = nil
-local clickInterval = tonumber(delayBox.Text) or 0.25
-local autoclickerProc = nil
-
-local function updateAutoClickerStatus()
-    autoclickerStartBtn.Text = "AutoClick: " .. (autoclickerEnabled and "เปิด" or "ปิด")
-    autoclickerCircle.BackgroundColor3 = autoclickerEnabled and statusColors.on or statusColors.off
-end
-
 autoclickerPickBtn.MouseButton1Click:Connect(function()
     coordLabel.Text = "Click or press Esc to pick"
     coordLabel.Visible = true
     autoclickerPickBtn.Text = "เลือกพิกัด..."
-    autoclickerStartBtn.Text = "AutoClick: ปิด"
-    autoclickerEnabled = false
-    if autoclickerProc then
-        -- ปิดโปรเซส python ถ้ามี
-        pcall(function() autoclickerProc:Close() end)
-        autoclickerProc = nil
-    end
     local pickConn, escConn
     pickConn = UserInputService.InputBegan:Connect(function(input, gp)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             local mousePos = UserInputService:GetMouseLocation()
             autoclickerPos = Vector2.new(mousePos.X, mousePos.Y)
-            coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y)
+            coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y).." (คัดลอกแล้ว!)"
             coordLabel.Visible = true
             autoclickerPickBtn.Text = "เลือกพิกัด"
+            -- copy ไป clipboard ให้ user เอาไปกรอกใน OP Auto Clicker
+            if setclipboard then
+                setclipboard(tostring(math.floor(autoclickerPos.X)).." "..tostring(math.floor(autoclickerPos.Y)))
+            end
             pickConn:Disconnect()
             if escConn then escConn:Disconnect() end
         elseif input.KeyCode == Enum.KeyCode.Escape then
@@ -378,51 +307,11 @@ autoclickerPickBtn.MouseButton1Click:Connect(function()
     escConn = pickConn
 end)
 
-delayBox.FocusLost:Connect(function()
-    clickInterval = tonumber(delayBox.Text) or 0.25
-end)
+-- =========== วิธีใช้ AutoClicker กับ OP Auto Clicker ===========
+-- 1. กด "เลือกพิกัด" ใน Roblox GUI แล้วคลิกที่จุดที่ต้องการบนหน้าจอ
+-- 2. สังเกตดูค่า X Y จะแสดงและจะ copy ไป clipboard อัตโนมัติ
+-- 3. เปิดโปรแกรม OP Auto Clicker 3.0 แล้ววางค่า X Y ในช่อง X,Y (หรือกรอกเอง)
+-- 4. กำหนด Interval (ms), Click type, Repeat ตามต้องการ แล้ว "Start" (F1) เพื่อให้ Auto Clicker คลิกที่จุดนั้น
+-- หมายเหตุ: Roblox Script ไม่สามารถคลิกเองได้นอกจากจะใช้ executor/โปรแกรมภายนอก
 
-local function stopAutoClicker()
-    autoclickerEnabled = false
-    updateAutoClickerStatus()
-    if autoclickerProc then
-        pcall(function() autoclickerProc:Close() end)
-        autoclickerProc = nil
-    end
-end
-
-local function startAutoClicker()
-    if autoclickerEnabled or not autoclickerPos then return end
-    autoclickerEnabled = true
-    clickInterval = tonumber(delayBox.Text) or 0.25
-    updateAutoClickerStatus()
-    -- เรียก Python AutoClicker (ต้องวาง ClickerBot.py ไว้และติดตั้ง pyautogui)
-    -- ตัวอย่าง: python ClickerBot.py <clicks> <delay> <x> <y>
-    -- แนะนำให้แก้ Python script ให้รับ argument x, y, delay, clicks
-    local x, y = math.floor(autoclickerPos.X), math.floor(autoclickerPos.Y)
-    local delay = tostring(clickInterval)
-    local clicks = 99999999 -- "infinite" (หรือจะใส่จำนวนจริงก็ได้)
-    -- *** อันนี้เฉพาะ executor ที่รัน os.execute/io.popen ได้ ***
-    local cmd = string.format('start "" python ClickerBot.py %d %s %d %d', clicks, delay, x, y)
-    -- ลองใช้ os.execute, หรือ io.popen ถ้า executor รองรับ
-    pcall(function()
-        autoclickerProc = io.popen and io.popen(cmd) or os.execute(cmd)
-    end)
-end
-
-autoclickerStartBtn.MouseButton1Click:Connect(function()
-    if not autoclickerEnabled and autoclickerPos then
-        startAutoClicker()
-    else
-        stopAutoClicker()
-    end
-end)
-
--- หมายเหตุสำคัญ:
--- - ต้องมี Python + pyautogui + ClickerBot.py ปรับให้รับ argument (ดูด้านล่าง)
--- - ถ้า executor ไม่รองรับ os.execute/io.popen จะไม่สามารถรัน Python ได้
--- - สำหรับ Roblox Studio จะไม่มีผลลัพธ์จริง
-
--- ตัวอย่างการปรับ ClickerBot.py ให้รองรับ argument (วางในโฟลเดอร์เดียวกับ .py):
--- main(clicks=..., delay=..., click_or_press='c', x=..., y=...)
--- และใน click() ให้ pyautogui.click(x, y)
+-- (ฟีเจอร์อื่นสามารถรวมเข้าตามที่โค้ดนี้แสดง)
