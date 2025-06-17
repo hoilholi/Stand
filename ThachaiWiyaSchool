@@ -1,4 +1,4 @@
--- Stand Power GUI + Ultimate Utility GUI (ตัดช่อง autoclick bar ออกตามภาพ)
+-- Stand Power GUI + Ultimate Utility GUI (ตัดช่อง autoclick bar + label ออกตามภาพ)
 -- หัว GUI: STAND (เหลือง) + POWER (ม่วง) แบบ 2 บรรทัด
 -- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (ไม่มีช่องพิมพ์ autoclick)
 -- ไม่มี Screen Tap
@@ -22,7 +22,7 @@ standLabel.Position = UDim2.new(0, 0, 0, 0)
 standLabel.BackgroundTransparency = 1
 standLabel.Font = Enum.Font.GothamBlack
 standLabel.TextSize = 34
-standLabel.TextColor3 = Color3.fromRGB(255, 215, 48) -- เหลืองทอง
+standLabel.TextColor3 = Color3.fromRGB(255, 215, 48)
 standLabel.TextStrokeTransparency = 0.7
 standLabel.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
 standLabel.Text = "STAND"
@@ -34,7 +34,7 @@ powerLabel.Position = UDim2.new(0, 0, 0, 30)
 powerLabel.BackgroundTransparency = 1
 powerLabel.Font = Enum.Font.GothamBlack
 powerLabel.TextSize = 34
-powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255) -- ม่วงสด
+powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255)
 powerLabel.TextStrokeTransparency = 0.7
 powerLabel.TextStrokeColor3 = Color3.fromRGB(60, 0, 90)
 powerLabel.Text = "POWER"
