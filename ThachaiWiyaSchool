@@ -1,4 +1,4 @@
--- Stand Power GUI + Ultimate Utility GUI + Infinite Yield Style Autoclick Integration
+-- Stand Power GUI + Ultimate Utility GUI + Infinite Yield Style Autoclick Integration (ครบทุกฟีเจอร์เหมือนปกติ)
 -- หัว GUI: STAND (เหลือง) + POWER (ม่วง) แบบ 2 บรรทัด
 -- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Autoclick Command (autoclick/unautoclick/noautoclick)
 -- ไม่มี Screen Tap
@@ -360,11 +360,3 @@ autoclickBar.FocusLost:Connect(function(enter)
 end)
 
 -------------------- End of Script --------------------
-
--- วิธีใช้:
--- 1. หัว GUI เป็น STAND (เหลือง) + POWER (ม่วง) สวยงาม
--- 2. มีฟีเจอร์หลักเหมือน Ultimate Utility GUI
--- 3. มีช่อง autoclick พิมพ์ autoclick 0.1 0.1 แล้ว Enter เพื่อออโต้คลิก, unautoclick/noautoclick เพื่อหยุด
--- 4. ไม่มีปุ่ม/GUI Screen Tap
--- 5. ฟีเจอร์อื่นใช้งานได้ตามปกติ (AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle)
--- หมายเหตุ: ถ้า executor รองรับ mouse1press()/mouse1release() ให้ใช้แทนในฟังก์ชัน start_autoclick()
