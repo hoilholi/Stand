@@ -1,5 +1,4 @@
--- Ultimate Utility GUI (AntiIdle มีปุ่มเปิดปิด เขียว/แดง, ไม่มี Freecam, AutoClicker พิกัดกำหนดเองตามแบบในภาพ)
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เขียว/แดง), AutoClicker (แสดงตำแหน่ง)
+-- Ultimate Utility GUI: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิดปิด), AutoClicker (เลือกพิกัด, ปุ่มเปิดปิด, ปรับดีเลย์), Drag GUI
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -8,7 +7,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 370, 0, 300)
+frame.Size = UDim2.new(0, 390, 0, 340)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0
@@ -150,18 +149,29 @@ antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 antiidleBtn.AutoButtonColor = true
 
--- 6. AutoClicker (ปุ่มแสดงบน GUI + แสดงพิกัด)
+-- 6. AutoClicker: ปุ่มเลือกตำแหน่ง, ปุ่มเริ่มหยุด, ดีเลย์
 local autoclickerCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
-local autoclickerBtn = Instance.new("TextButton", frame)
-autoclickerBtn.Size = UDim2.new(0, 210, 0, 28)
-autoclickerBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
-autoclickerBtn.Text = "AutoClicker : ปิด"
-autoclickerBtn.Font = Enum.Font.GothamBold
-autoclickerBtn.TextSize = 16
-autoclickerBtn.BackgroundColor3 = bluebtn
-autoclickerBtn.TextColor3 = Color3.new(1,1,1)
-autoclickerBtn.BorderSizePixel = 0
-autoclickerBtn.AutoButtonColor = true
+local autoclickerPickBtn = Instance.new("TextButton", frame)
+autoclickerPickBtn.Size = UDim2.new(0, 110, 0, 28)
+autoclickerPickBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
+autoclickerPickBtn.Text = "เลือกพิกัด"
+autoclickerPickBtn.Font = Enum.Font.GothamBold
+autoclickerPickBtn.TextSize = 15
+autoclickerPickBtn.BackgroundColor3 = bluebtn
+autoclickerPickBtn.TextColor3 = Color3.new(1,1,1)
+autoclickerPickBtn.BorderSizePixel = 0
+autoclickerPickBtn.AutoButtonColor = true
+
+local autoclickerStartBtn = Instance.new("TextButton", frame)
+autoclickerStartBtn.Size = UDim2.new(0, 90, 0, 28)
+autoclickerStartBtn.Position = UDim2.new(0, leftX+150, 0, y0+rowH*5+4)
+autoclickerStartBtn.Text = "AutoClick: ปิด"
+autoclickerStartBtn.Font = Enum.Font.GothamBold
+autoclickerStartBtn.TextSize = 15
+autoclickerStartBtn.BackgroundColor3 = darkbtn
+autoclickerStartBtn.TextColor3 = Color3.new(1,1,1)
+autoclickerStartBtn.BorderSizePixel = 0
+autoclickerStartBtn.AutoButtonColor = true
 
 local coordLabel = Instance.new("TextLabel", frame)
 coordLabel.Size = UDim2.new(0, 200, 0, 22)
@@ -172,6 +182,25 @@ coordLabel.TextColor3 = Color3.fromRGB(230,230,230)
 coordLabel.BackgroundTransparency = 1
 coordLabel.Text = "Click or press Esc to pick"
 coordLabel.Visible = false
+
+local delayLabel = Instance.new("TextLabel", frame)
+delayLabel.Size = UDim2.new(0, 40, 0, 22)
+delayLabel.Position = UDim2.new(0, leftX+28, 0, y0+rowH*6+38)
+delayLabel.Text = "Delay"
+delayLabel.Font = Enum.Font.Gotham
+delayLabel.TextSize = 13
+delayLabel.TextColor3 = Color3.fromRGB(200,200,200)
+delayLabel.BackgroundTransparency = 1
+
+local delayBox = Instance.new("TextBox", frame)
+delayBox.Size = UDim2.new(0, 60, 0, 22)
+delayBox.Position = UDim2.new(0, leftX+70, 0, y0+rowH*6+38)
+delayBox.Text = "0.25"
+delayBox.TextColor3 = Color3.fromRGB(0,0,0)
+delayBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
+delayBox.Font = Enum.Font.Gotham
+delayBox.TextSize = 13
+delayBox.BorderSizePixel = 0
 
 -------------------- LOGIC ------------------
 
@@ -305,58 +334,83 @@ antiidleBtn.MouseButton1Click:Connect(function()
     setAntiIdle(not antiidleEnabled)
 end)
 
--- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด)
+-- 6. AutoClicker (เลือกจุด/เปิดปิด + แสดงพิกัด + ปรับดีเลย์)
 local autoclickerEnabled = false
 local autoclickerPos = nil
 local autoclickerConn = nil
-local clickInterval = 0.25 -- วินาที
+local clickInterval = tonumber(delayBox.Text) or 0.25
 
-local function updateAutoClickerBtn()
-    autoclickerBtn.Text = "AutoClicker : " .. (autoclickerEnabled and "เปิด" or "ปิด")
+local function updateAutoClickerStatus()
+    autoclickerStartBtn.Text = "AutoClick: " .. (autoclickerEnabled and "เปิด" or "ปิด")
     autoclickerCircle.BackgroundColor3 = autoclickerEnabled and statusColors.on or statusColors.off
 end
 
-autoclickerBtn.MouseButton1Click:Connect(function()
-    if autoclickerEnabled then
-        autoclickerEnabled = false
-        if autoclickerConn then
-            pcall(function() autoclickerConn:Disconnect() end)
+autoclickerPickBtn.MouseButton1Click:Connect(function()
+    coordLabel.Text = "Click or press Esc to pick"
+    coordLabel.Visible = true
+    autoclickerPickBtn.Text = "เลือกพิกัด..."
+    autoclickerStartBtn.Text = "AutoClick: ปิด"
+    autoclickerCircle.BackgroundColor3 = statusColors.off
+    autoclickerEnabled = false
+    if autoclickerConn then pcall(function() autoclickerConn:Disconnect() end) end
+    local pickConn, escConn
+    pickConn = UserInputService.InputBegan:Connect(function(input, gp)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = UserInputService:GetMouseLocation()
+            autoclickerPos = Vector2.new(mousePos.X, mousePos.Y)
+            coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y)
+            coordLabel.Visible = true
+            autoclickerPickBtn.Text = "เลือกพิกัด"
+            pickConn:Disconnect()
+            if escConn then escConn:Disconnect() end
+        elseif input.KeyCode == Enum.KeyCode.Escape then
+            coordLabel.Visible = false
+            autoclickerPickBtn.Text = "เลือกพิกัด"
+            pickConn:Disconnect()
+            if escConn then escConn:Disconnect() end
         end
-        updateAutoClickerBtn()
-        coordLabel.Visible = false
-    else
-        -- เริ่มเลือกจุด
-        coordLabel.Text = "Click or press Esc to pick"
-        coordLabel.Visible = true
-        autoclickerBtn.Text = "AutoClicker : เลือกจุด..."
-        autoclickerCircle.BackgroundColor3 = statusColors.off
-        local pickConn, escConn
-        pickConn = UserInputService.InputBegan:Connect(function(input, gp)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mousePos = UserInputService:GetMouseLocation()
-                autoclickerPos = Vector2.new(mousePos.X, mousePos.Y)
-                coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y)
-                coordLabel.Visible = true
-                autoclickerEnabled = true
-                updateAutoClickerBtn()
-                -- เริ่ม AutoClick loop
-                autoclickerConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
-                    if autoclickerEnabled and autoclickerPos then
-                        -- ซิมูเลตคลิกซ้ายที่จุด
-                        -- หมายเหตุ: ใน Roblox Studio/Executor ส่วนใหญ่ไม่สามารถซิมูเลตคลิกนอก Roblox ได้จริง
-                        -- ถ้า executor รองรับ: firemouseclick(0, autoclickerPos.X, autoclickerPos.Y)
-                        -- ตัวอย่างใน Roblox เองจะข้าม (แต่แสดงตำแหน่ง)
-                    end
-                end)
-                pickConn:Disconnect()
-                if escConn then escConn:Disconnect() end
-            elseif input.KeyCode == Enum.KeyCode.Escape then
-                coordLabel.Visible = false
-                autoclickerBtn.Text = "AutoClicker : ปิด"
-                pickConn:Disconnect()
-                if escConn then escConn:Disconnect() end
-            end
-        end)
-        escConn = pickConn
+    end)
+    escConn = pickConn
+end)
+
+local function startAutoClicker()
+    if autoclickerEnabled or not autoclickerPos then return end
+    autoclickerEnabled = true
+    updateAutoClickerStatus()
+    -- ใน Roblox เอง simulate mouse click นอก client ไม่ได้ ต้องใช้ executor ที่รองรับ firemouseclick
+    autoclickerConn = game:GetService("RunService").RenderStepped:Connect(function()
+        if autoclickerEnabled and autoclickerPos then
+            -- firemouseclick(0, autoclickerPos.X, autoclickerPos.Y) -- สำหรับ executor ที่รองรับ
+            -- หรือแค่แสดงตำแหน่ง
+        end
+    end)
+    -- ทำ loop จริงแบบ interval
+    spawn(function()
+        while autoclickerEnabled and autoclickerPos do
+            -- firemouseclick(0, autoclickerPos.X, autoclickerPos.Y)
+            wait(clickInterval)
+        end
+    end)
+end
+
+local function stopAutoClicker()
+    autoclickerEnabled = false
+    updateAutoClickerStatus()
+    if autoclickerConn then
+        pcall(function() autoclickerConn:Disconnect() end)
+        autoclickerConn = nil
     end
+end
+
+autoclickerStartBtn.MouseButton1Click:Connect(function()
+    if not autoclickerEnabled and autoclickerPos then
+        clickInterval = tonumber(delayBox.Text) or 0.25
+        startAutoClicker()
+    else
+        stopAutoClicker()
+    end
+end)
+
+delayBox.FocusLost:Connect(function()
+    clickInterval = tonumber(delayBox.Text) or 0.25
 end)
