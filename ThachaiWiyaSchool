@@ -1,6 +1,6 @@
--- Ultimate Utility GUI + ฟีเจอร์คลิกจอ (Screen Tap อัตโนมัติ เปิด/ปิด ดีเลย์ 300ms)
--- ฟีเจอร์หลัก: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, ScreenTap (Auto Tap) เปิด/ปิด
--- หมายเหตุ: ฟีเจอร์ ScreenTap จะ "แตะ" ที่กลางหน้าจอซ้ำๆ ทุก 0.3 วินาที (มือถือ/PC ที่รองรับเท่านั้น)
+-- Ultimate Utility GUI + Screen Auto Click (กดจอในเกม Roblox อัตโนมัติทุก 0.3 วิ เปิด/ปิดได้)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Screen Auto Click (แตะ/คลิกกลางจอซ้ำๆ)
+-- หมายเหตุ: ฟีเจอร์ Screen Auto Click ใช้ TouchTap (มือถือ/Tablet หรือ Emulator ที่รองรับเท่านั้น)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -9,7 +9,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 380)
+frame.Size = UDim2.new(0, 390, 0, 410)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
@@ -139,17 +139,17 @@ antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 
--- 6. Auto Screen Tap (คลิกจออัตโนมัติ)
-local screentapCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
-local screentapBtn = Instance.new("TextButton", frame)
-screentapBtn.Size = UDim2.new(0, 210, 0, 28)
-screentapBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
-screentapBtn.Text = "Screen Tap : ปิด"
-screentapBtn.Font = Enum.Font.GothamBold
-screentapBtn.TextSize = 16
-screentapBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
-screentapBtn.TextColor3 = Color3.new(1,1,1)
-screentapBtn.BorderSizePixel = 0
+-- 6. Screen Auto Click (แตะจออัตโนมัติ)
+local screenclickCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
+local screenclickBtn = Instance.new("TextButton", frame)
+screenclickBtn.Size = UDim2.new(0, 210, 0, 28)
+screenclickBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
+screenclickBtn.Text = "Screen Auto Click : ปิด"
+screenclickBtn.Font = Enum.Font.GothamBold
+screenclickBtn.TextSize = 16
+screenclickBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+screenclickBtn.TextColor3 = Color3.new(1,1,1)
+screenclickBtn.BorderSizePixel = 0
 
 -------------------- LOGIC (Utility) ------------------
 
@@ -266,30 +266,30 @@ local function setAntiIdle(state)
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--- 6. Screen Tap (Auto Tap ที่จอ)
-local screentapEnabled = false
-local screentapConn = nil
-local tapDelay = 0.3
+-- 6. Screen Auto Click (TouchTap)
+local screenclickEnabled = false
+local screenclickConn = nil
+local clickDelay = 0.3 -- วินาที
 
-local function setScreenTap(state)
-    screentapEnabled = state
-    screentapBtn.Text = "Screen Tap : " .. (screentapEnabled and "เปิด" or "ปิด")
-    screentapBtn.BackgroundColor3 = screentapEnabled and statusColors.on or Color3.fromRGB(56, 100, 125)
-    screentapCircle.BackgroundColor3 = screentapEnabled and statusColors.on or statusColors.off
-    if screentapConn then screentapConn:Disconnect() screentapConn = nil end
-    if screentapEnabled then
-        screentapConn = game:GetService("RunService").RenderStepped:Connect(function()
-            if screentapEnabled then
-                -- แตะกลางจอ (มือถือจะทำงาน, PC ส่วนใหญ่จะไม่เห็นผล)
+local function setScreenClick(state)
+    screenclickEnabled = state
+    screenclickBtn.Text = "Screen Auto Click : " .. (screenclickEnabled and "เปิด" or "ปิด")
+    screenclickBtn.BackgroundColor3 = screenclickEnabled and statusColors.on or Color3.fromRGB(56, 100, 125)
+    screenclickCircle.BackgroundColor3 = screenclickEnabled and statusColors.on or statusColors.off
+    if screenclickConn then screenclickConn:Disconnect() screenclickConn = nil end
+    if screenclickEnabled then
+        screenclickConn = game:GetService("RunService").RenderStepped:Connect(function()
+            if screenclickEnabled then
+                -- แตะกลางจอ (มือถือ/Tablet)
                 local cam = workspace.CurrentCamera
                 local vp = cam.ViewportSize
                 UserInputService:TouchTap(Vector2.new(vp.X/2, vp.Y/2), 0)
-                wait(tapDelay)
+                wait(clickDelay)
             end
         end)
     end
 end
 
-screentapBtn.MouseButton1Click:Connect(function()
-    setScreenTap(not screentapEnabled)
+screenclickBtn.MouseButton1Click:Connect(function()
+    setScreenClick(not screenclickEnabled)
 end)
