@@ -1,5 +1,5 @@
--- Ultimate Utility GUI : AntiFling, Set Spawn (2 จุด), AutoTP (HP<10%), DiedTP (อัตโนมัติ), Drag GUI, Hide/Show GUI
--- ไม่มีปุ่มลัด, DiedTP จะวาร์ปทันทีเมื่อตัวละครตาย, AutoTP แยกจุดเอง, Inspired by Infinite Yield แต่เขียนใหม่หมด
+-- Ultimate Utility GUI : AntiFling, Set Spawn (2 จุด), AutoTP (HP<10%), DiedTP (กดปุ่มและทำงานเร็ว), Drag GUI, Hide/Show GUI
+-- DiedTP: มีปุ่มกด, อัปเดต deathPos ไวขึ้น
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -98,7 +98,7 @@ antiflingBtn.TextSize = 14
 antiflingBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 antiflingBtn.TextColor3 = Color3.new(1,1,1)
 
--- 2. Auto TP (Teleport เมื่อเลือดต่ำ) [Set จุดแยก]
+-- 2. Auto TP (เลือดต่ำวาป: จุดแยกจาก Spawn)
 y = y + 38
 local autotpcircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
 local autotpswitch = Instance.new("TextButton", frame)
@@ -151,12 +151,21 @@ spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
 spawnInfo.BackgroundTransparency = 1
 spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 4. DiedTP (Auto)
+-- 4. DiedTP (ปุ่มกด + ทำงานไว)
 y = y + 38
 local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
+diedtpBtn.Position = UDim2.new(0, 32, 0, y)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 14
+diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
+
 local diedtpInfo = Instance.new("TextLabel", frame)
-diedtpInfo.Size = UDim2.new(1, -36, 0, 24)
-diedtpInfo.Position = UDim2.new(0, 32, 0, y)
+diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
+diedtpInfo.Position = UDim2.new(0, 160, 0, y)
 diedtpInfo.Text = "ยังไม่ตาย"
 diedtpInfo.Font = Enum.Font.Gotham
 diedtpInfo.TextSize = 12
@@ -168,7 +177,7 @@ diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
 local tip = Instance.new("TextLabel", frame)
 tip.Size = UDim2.new(1, -20, 0, 28)
 tip.Position = UDim2.new(0, 10, 0, 244)
-tip.Text = "ลาก GUI ได้ | Hide GUI | DiedTP อัตโนมัติเมื่อเกิดใหม่"
+tip.Text = "ลาก GUI ได้ | Hide GUI | DiedTP เร็วขึ้นและมีปุ่มกด"
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 12
 tip.TextColor3 = Color3.fromRGB(200,255,190)
@@ -276,33 +285,28 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 4. DiedTP (อัตโนมัติเมื่อเกิดใหม่)
-local deathPos
+-- 4. DiedTP (บันทึกจุดตายล่าสุดทันที & กดปุ่มวาร์ป)
+local deathPos = nil
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
+    -- ปรับให้เซ็ต deathPos ไวขึ้น (ใช้ Stepped ตรวจสอบ)
+    local diedFlag = false
     hum.Died:Connect(function()
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            deathPos = hrp.Position
+        diedFlag = true
+    end)
+    game:GetService("RunService").Stepped:Connect(function()
+        if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
+            deathPos = char.HumanoidRootPart.Position
             diedtpCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
             diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
             diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
+            diedFlag = false
         end
     end)
-    -- DiedTP จะทำงานอัตโนมัติเมื่อ respawn
-    if deathPos then
-        -- รอให้ HumanoidRootPart โผล่แน่ ๆ
-        spawn(function()
-            local hrp
-            for i=1,50 do
-                hrp = char:FindFirstChild("HumanoidRootPart")
-                if hrp then break end
-                wait(0.06)
-            end
-            if hrp and deathPos then
-                hrp.CFrame = CFrame.new(deathPos)
-                diedtpInfo.Text = "วาร์ปไปจุดตายล่าสุดแล้ว"
-            end
-        end)
+end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
     end
 end)
