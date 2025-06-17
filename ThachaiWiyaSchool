@@ -1,5 +1,5 @@
 -- วางใน LocalScript (StarterPlayerScripts)
--- ฟีเจอร์: AntiFling, Freecam (ปรับสปีด + เมาส์หันกล้อง), Set Spawn, DiedTP + GUI แสดงสถานะ
+-- ฟีเจอร์หลัก: DiedTP, Freecam (หมุนกล้อง/สปีด), Set Spawn
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -7,11 +7,10 @@ gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 340, 0, 254)
+frame.Size = UDim2.new(0, 350, 0, 260)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0.1
-frame.BorderSizePixel = 0
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 36)
@@ -22,38 +21,33 @@ title.TextSize = 20
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 235, 110)
 
--- Helper: วาดสถานะเป็นวงกลมสี (เขียว/แดง/เหลือง)
-local function makeStatusCircle(parent, color, y)
-    local cir = Instance.new("Frame", parent)
-    cir.Size = UDim2.new(0, 16, 0, 16)
-    cir.Position = UDim2.new(0, 10, 0, y)
-    cir.BackgroundColor3 = color
-    cir.BorderSizePixel = 0
-    cir.Name = "StatusCircle"
-    local uicorner = Instance.new("UICorner", cir)
-    uicorner.CornerRadius = UDim.new(1,0)
-    return cir
-end
-
 local y = 44
 
--- 1. AntiFling
-local antiflingCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
-local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0, 120, 0, 24)
-antiflingBtn.Position = UDim2.new(0, 32, 0, y)
-antiflingBtn.Text = "AntiFling : ปิด"
-antiflingBtn.Font = Enum.Font.GothamBold
-antiflingBtn.TextSize = 14
-antiflingBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
-antiflingBtn.TextColor3 = Color3.new(1,1,1)
+-- DiedTP
+local diedtpBtn = Instance.new("TextButton", frame)
+diedtpBtn.Size = UDim2.new(0, 120, 0, 28)
+diedtpBtn.Position = UDim2.new(0, 18, 0, y)
+diedtpBtn.Text = "DiedTP"
+diedtpBtn.Font = Enum.Font.GothamBold
+diedtpBtn.TextSize = 14
+diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
+diedtpBtn.TextColor3 = Color3.new(1,1,1)
 
--- 2. Freecam
+local diedtpInfo = Instance.new("TextLabel", frame)
+diedtpInfo.Size = UDim2.new(1, -150, 0, 28)
+diedtpInfo.Position = UDim2.new(0, 146, 0, y)
+diedtpInfo.Text = "ยังไม่ตาย"
+diedtpInfo.Font = Enum.Font.Gotham
+diedtpInfo.TextSize = 12
+diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
+diedtpInfo.BackgroundTransparency = 1
+diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Freecam
 y = y + 38
-local freecamCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
 local freecamBtn = Instance.new("TextButton", frame)
-freecamBtn.Size = UDim2.new(0, 120, 0, 24)
-freecamBtn.Position = UDim2.new(0, 32, 0, y)
+freecamBtn.Size = UDim2.new(0, 120, 0, 28)
+freecamBtn.Position = UDim2.new(0, 18, 0, y)
 freecamBtn.Text = "Freecam : ปิด"
 freecamBtn.Font = Enum.Font.GothamBold
 freecamBtn.TextSize = 14
@@ -62,7 +56,7 @@ freecamBtn.TextColor3 = Color3.new(1,1,1)
 
 local speedLabel = Instance.new("TextLabel", frame)
 speedLabel.Size = UDim2.new(0, 50, 0, 22)
-speedLabel.Position = UDim2.new(0, 158, 0, y+1)
+speedLabel.Position = UDim2.new(0, 148, 0, y+3)
 speedLabel.Text = "Speed"
 speedLabel.TextColor3 = Color3.fromRGB(255,255,110)
 speedLabel.BackgroundTransparency = 1
@@ -71,7 +65,7 @@ speedLabel.TextSize = 12
 
 local speedBox = Instance.new("TextBox", frame)
 speedBox.Size = UDim2.new(0, 40, 0, 22)
-speedBox.Position = UDim2.new(0, 210, 0, y+1)
+speedBox.Position = UDim2.new(0, 200, 0, y+4)
 speedBox.Text = "2"
 speedBox.TextColor3 = Color3.fromRGB(0,0,0)
 speedBox.BackgroundColor3 = Color3.fromRGB(200,220,255)
@@ -80,19 +74,18 @@ speedBox.TextSize = 12
 
 local freecamTip = Instance.new("TextLabel", frame)
 freecamTip.Size = UDim2.new(1, -24, 0, 18)
-freecamTip.Position = UDim2.new(0, 10, 0, y+26)
+freecamTip.Position = UDim2.new(0, 10, 0, y+28)
 freecamTip.Text = "WASD/Space/Shift | Scroll = Speed | เมาส์หันกล้อง"
 freecamTip.Font = Enum.Font.Gotham
 freecamTip.TextSize = 11
 freecamTip.TextColor3 = Color3.fromRGB(210,210,240)
 freecamTip.BackgroundTransparency = 1
 
--- 3. Set Spawn
+-- Spawn
 y = y + 50
-local spawnCircle = makeStatusCircle(frame, Color3.fromRGB(210, 210, 50), y+2)
 local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 120, 0, 24)
-spawnBtn.Position = UDim2.new(0, 32, 0, y)
+spawnBtn.Size = UDim2.new(0, 120, 0, 28)
+spawnBtn.Position = UDim2.new(0, 18, 0, y)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
 spawnBtn.TextSize = 14
@@ -100,8 +93,8 @@ spawnBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 
 local spawnInfo = Instance.new("TextLabel", frame)
-spawnInfo.Size = UDim2.new(1, -160, 0, 24)
-spawnInfo.Position = UDim2.new(0, 160, 0, y)
+spawnInfo.Size = UDim2.new(1, -150, 0, 28)
+spawnInfo.Position = UDim2.new(0, 146, 0, y)
 spawnInfo.Text = "ยังไม่ตั้งจุดเกิด"
 spawnInfo.Font = Enum.Font.Gotham
 spawnInfo.TextSize = 12
@@ -109,86 +102,52 @@ spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
 spawnInfo.BackgroundTransparency = 1
 spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 4. DiedTP
-y = y + 38
-local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
-local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
-diedtpBtn.Position = UDim2.new(0, 32, 0, y)
-diedtpBtn.Text = "DiedTP"
-diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 14
-diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
-diedtpBtn.TextColor3 = Color3.new(1,1,1)
-
-local diedtpInfo = Instance.new("TextLabel", frame)
-diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
-diedtpInfo.Position = UDim2.new(0, 160, 0, y)
-diedtpInfo.Text = "ยังไม่ตาย"
-diedtpInfo.Font = Enum.Font.Gotham
-diedtpInfo.TextSize = 12
-diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
-diedtpInfo.BackgroundTransparency = 1
-diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
-
--- ท้ายสุด
+-- Tips
 local tip = Instance.new("TextLabel", frame)
-tip.Size = UDim2.new(1, -20, 0, 26)
-tip.Position = UDim2.new(0, 10, 0, 219)
-tip.Text = "ปุ่มลัด: F=Freecam, K=Set Spawn, G=DiedTP, Q=AntiFling"
+tip.Size = UDim2.new(1, -20, 0, 24)
+tip.Position = UDim2.new(0, 10, 0, 210)
+tip.Text = "ปุ่มลัด: F=Freecam, K=Set Spawn, G=DiedTP"
 tip.Font = Enum.Font.Gotham
 tip.TextSize = 12
 tip.TextColor3 = Color3.fromRGB(200,255,190)
 tip.BackgroundTransparency = 1
 
----------------------------- LOGIC ----------------------------
+--------------------------- LOGIC ---------------------------
 
--- 1. AntiFling
-local antiflingEnabled = false
-local function setAntiFling(state)
-    antiflingEnabled = state
-    antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
-    antiflingCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
-end
-antiflingBtn.MouseButton1Click:Connect(function()
-    setAntiFling(not antiflingEnabled)
-end)
-
--- AntiFling loop (inspired by Infinite Yield)
-spawn(function()
-    while true do
-        task.wait(0.2)
-        if antiflingEnabled then
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local hrp = char.HumanoidRootPart
-                if math.abs(hrp.Velocity.X) > 120 or math.abs(hrp.Velocity.Y) > 120 or math.abs(hrp.Velocity.Z) > 120 then
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                end
-                if math.abs(hrp.RotVelocity.X) > 50 or math.abs(hrp.RotVelocity.Y) > 50 or math.abs(hrp.RotVelocity.Z) > 50 then
-                    hrp.RotVelocity = Vector3.new(0, 0, 0)
-                end
-            end
+-- DiedTP Logic
+local deathPos
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Died:Connect(function()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            deathPos = hrp.Position
+            diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
+            diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
         end
+    end)
+end)
+diedtpBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
     end
 end)
 
--- 2. Freecam
+-- Freecam Logic
 local freecamActive, freecamConnection, freecamSpeed = false, nil, 2
 local function setFreecam(state)
     freecamActive = state
     freecamBtn.Text = "Freecam : " .. (state and "เปิด" or "ปิด")
-    freecamCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
-end
-freecamBtn.MouseButton1Click:Connect(function()
-    setFreecam(not freecamActive)
     if freecamActive then
         startFreecam()
     end
+end
+freecamBtn.MouseButton1Click:Connect(function()
+    setFreecam(not freecamActive)
 end)
 
 local function startFreecam()
-    -- Inspired by Infinite Yield/Script-Ware, but logic rewritten
     local UIS = game:GetService("UserInputService")
     local RS = game:GetService("RunService")
     local cam = workspace.CurrentCamera
@@ -203,7 +162,7 @@ local function startFreecam()
     local function onInput(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.F then setFreecam(false) -- ปิด
+            if input.KeyCode == Enum.KeyCode.F then freecamActive = false -- ปิด
             elseif input.KeyCode == Enum.KeyCode.W then moveVec = Vector3.new(0,0,-1)
             elseif input.KeyCode == Enum.KeyCode.A then moveVec = Vector3.new(-1,0,0)
             elseif input.KeyCode == Enum.KeyCode.S then moveVec = Vector3.new(0,0,1)
@@ -261,19 +220,16 @@ speedBox.FocusLost:Connect(function(enter)
     if enter then freecamSpeed = tonumber(speedBox.Text) or 2 end
 end)
 
--- 3. Set Spawn
+-- Set Spawn Logic
 local spawnPos
 spawnBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         spawnPos = char.HumanoidRootPart.Position
-        spawnCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
         spawnInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", spawnPos.X, spawnPos.Y, spawnPos.Z)
         spawnInfo.TextColor3 = Color3.fromRGB(80,210,80)
     end
 end)
-
--- เมื่อเกิดใหม่จะวาร์ปไป spawn
 player.CharacterAdded:Connect(function(char)
     wait(0.1)
     if spawnPos then
@@ -282,33 +238,11 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 4. DiedTP
-local deathPos
-player.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid")
-    hum.Died:Connect(function()
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            deathPos = hrp.Position
-            diedtpCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
-            diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
-            diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
-        end
-    end)
-end)
-diedtpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
-    end
-end)
-
------------------------- HOTKEYS ------------------------
+-- Hotkeys
 local UIS = game:GetService("UserInputService")
 UIS.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.F then freecamBtn:Activate() end
     if input.KeyCode == Enum.KeyCode.K then spawnBtn:Activate() end
     if input.KeyCode == Enum.KeyCode.G then diedtpBtn:Activate() end
-    if input.KeyCode == Enum.KeyCode.Q then antiflingBtn:Activate() end
 end)
