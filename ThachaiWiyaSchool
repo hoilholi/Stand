@@ -1,6 +1,8 @@
--- Ultimate Utility GUI + ฟีเจอร์คลิกจอ (Screen Tap อัตโนมัติ เปิด/ปิด ดีเลย์ 300ms)
--- ฟีเจอร์หลัก: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, ScreenTap (Auto Tap) เปิด/ปิด
--- หมายเหตุ: ฟีเจอร์ ScreenTap จะ "แตะ" ที่กลางหน้าจอซ้ำๆ ทุก 0.3 วินาที (มือถือ/PC ที่รองรับเท่านั้น)
+-- Ultimate Utility GUI + Infinite Yield Style Autoclick Command Integration
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, Autoclick Command (autoclick/unautoclick/noautoclick)
+-- วิธีใช้:
+--   autoclick [click delay] [release delay]   (ตัวอย่าง: autoclick 0.1 0.1)
+--   unautoclick หรือ noautoclick             (หยุดออโต้คลิก)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -9,7 +11,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 380)
+frame.Size = UDim2.new(0, 390, 0, 430)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
@@ -139,17 +141,37 @@ antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 
--- 6. Auto Screen Tap (คลิกจออัตโนมัติ)
-local screentapCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
-local screentapBtn = Instance.new("TextButton", frame)
-screentapBtn.Size = UDim2.new(0, 210, 0, 28)
-screentapBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
-screentapBtn.Text = "Screen Tap : ปิด"
-screentapBtn.Font = Enum.Font.GothamBold
-screentapBtn.TextSize = 16
-screentapBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
-screentapBtn.TextColor3 = Color3.new(1,1,1)
-screentapBtn.BorderSizePixel = 0
+-- 6. Autoclick Command Bar (Infinite Yield style)
+local autoclickLabel = Instance.new("TextLabel", frame)
+autoclickLabel.Size = UDim2.new(0, 370, 0, 24)
+autoclickLabel.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+8)
+autoclickLabel.BackgroundTransparency = 1
+autoclickLabel.Font = Enum.Font.Gotham
+autoclickLabel.TextSize = 14
+autoclickLabel.TextColor3 = Color3.fromRGB(255, 235, 110)
+autoclickLabel.Text = "autoclick [click delay] [release delay] | unautoclick/noautoclick"
+autoclickLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local autoclickBar = Instance.new("TextBox", frame)
+autoclickBar.Size = UDim2.new(0, 320, 0, 28)
+autoclickBar.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+34)
+autoclickBar.Font = Enum.Font.Gotham
+autoclickBar.TextSize = 15
+autoclickBar.TextColor3 = Color3.fromRGB(200, 255, 200)
+autoclickBar.PlaceholderText = "พิมพ์คำสั่ง autoclick 0.1 0.1 หรือ unautoclick"
+autoclickBar.ClearTextOnFocus = false
+autoclickBar.BackgroundColor3 = Color3.fromRGB(47,52,65)
+autoclickBar.Text = ""
+autoclickBar.BorderSizePixel = 0
+
+local autoclickStatus = Instance.new("TextLabel", frame)
+autoclickStatus.Size = UDim2.new(0, 320, 0, 18)
+autoclickStatus.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+64)
+autoclickStatus.Font = Enum.Font.Gotham
+autoclickStatus.TextSize = 13
+autoclickStatus.TextColor3 = Color3.fromRGB(200, 255, 200)
+autoclickStatus.BackgroundTransparency = 1
+autoclickStatus.Text = ""
 
 -------------------- LOGIC (Utility) ------------------
 
@@ -266,30 +288,64 @@ local function setAntiIdle(state)
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--- 6. Screen Tap (Auto Tap ที่จอ)
-local screentapEnabled = false
-local screentapConn = nil
-local tapDelay = 0.3
+-- 6. Autoclick (Infinite Yield style logic)
+local autoclick_enabled = false
+local autoclick_conn = nil
 
-local function setScreenTap(state)
-    screentapEnabled = state
-    screentapBtn.Text = "Screen Tap : " .. (screentapEnabled and "เปิด" or "ปิด")
-    screentapBtn.BackgroundColor3 = screentapEnabled and statusColors.on or Color3.fromRGB(56, 100, 125)
-    screentapCircle.BackgroundColor3 = screentapEnabled and statusColors.on or statusColors.off
-    if screentapConn then screentapConn:Disconnect() screentapConn = nil end
-    if screentapEnabled then
-        screentapConn = game:GetService("RunService").RenderStepped:Connect(function()
-            if screentapEnabled then
-                -- แตะกลางจอ (มือถือจะทำงาน, PC ส่วนใหญ่จะไม่เห็นผล)
-                local cam = workspace.CurrentCamera
-                local vp = cam.ViewportSize
-                UserInputService:TouchTap(Vector2.new(vp.X/2, vp.Y/2), 0)
-                wait(tapDelay)
-            end
+local function start_autoclick(click_delay, release_delay)
+    if autoclick_conn then autoclick_conn:Disconnect() autoclick_conn = nil end
+    autoclick_enabled = true
+    autoclickStatus.Text = string.format("AutoClick ON | click: %.2fs | release: %.2fs", click_delay, release_delay)
+
+    autoclick_conn = game:GetService("RunService").RenderStepped:Connect(function()
+        if not autoclick_enabled then return end
+        -- ใช้กับ Synapse X: mouse1press/mouse1release
+        -- mouse1press()
+        -- wait(click_delay)
+        -- mouse1release()
+        -- wait(release_delay)
+        -- (ถ้าต้องการให้คลิกในเกมทั่วไป ให้ใช้ fireclickdetector/activate หรือ event อื่นที่เกมรองรับ)
+        pcall(function()
+            UserInputService.InputBegan:Fire({UserInputType=Enum.UserInputType.MouseButton1, UserInputState=Enum.UserInputState.Begin})
+            wait(click_delay)
+            UserInputService.InputEnded:Fire({UserInputType=Enum.UserInputType.MouseButton1, UserInputState=Enum.UserInputState.End})
+            wait(release_delay)
         end)
+    end)
+end
+
+local function stop_autoclick()
+    autoclick_enabled = false
+    if autoclick_conn then autoclick_conn:Disconnect() autoclick_conn = nil end
+    autoclickStatus.Text = "AutoClick OFF"
+end
+
+local function parseAutoclickCommand(cmdstr)
+    -- ตัวอย่าง: autoclick 0.1 0.1
+    local args = {}
+    for word in string.gmatch(cmdstr, "%S+") do table.insert(args, word) end
+    if #args == 0 then return end
+    local cmd = args[1]:lower()
+    if cmd == "autoclick" then
+        local click_delay = tonumber(args[2]) or 0.1
+        local release_delay = tonumber(args[3]) or 0.1
+        start_autoclick(click_delay, release_delay)
+    elseif cmd == "unautoclick" or cmd == "noautoclick" then
+        stop_autoclick()
     end
 end
 
-screentapBtn.MouseButton1Click:Connect(function()
-    setScreenTap(not screentapEnabled)
+autoclickBar.FocusLost:Connect(function(enter)
+    if enter then
+        parseAutoclickCommand(autoclickBar.Text)
+        autoclickBar.Text = ""
+    end
 end)
+
+-------------------- End of Script --------------------
+
+-- วิธีใช้: 
+-- 1. ดูที่ GUI จะมีช่อง autoclick พิมพ์ autoclick 0.1 0.1 แล้ว Enter เพื่อเริ่มออโต้คลิก
+-- 2. พิมพ์ unautoclick หรือ noautoclick เพื่อหยุด
+-- 3. ฟีเจอร์อื่นใช้งานได้ตามปกติ (AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle)
+-- หมายเหตุ: ถ้า executor รองรับ mouse1press()/mouse1release() ให้ใช้แทนในฟังก์ชัน start_autoclick() จะได้ผลชัวร์กับทุกเกม
