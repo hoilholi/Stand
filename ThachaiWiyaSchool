@@ -1,15 +1,15 @@
--- Ultimate Utility GUI + OP Auto Clicker Integration (สำหรับใช้งานร่วมกับ OP Auto Clicker 3.0 แบบในภาพ ![image6](image6))
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (เปิด/ปิด), AutoClicker (เลือก/โชว์พิกัด, กด copy ไป clipboard เพื่อใส่ใน OP Auto Clicker)
--- หมายเหตุ: Roblox ไม่สามารถคลิกเมาส์จริงๆ ได้ ต้องใช้ OP Auto Clicker ภายนอกตามภาพ
+-- Ultimate Utility GUI + ฟีเจอร์คลิกจอ (Screen Tap อัตโนมัติ เปิด/ปิด ดีเลย์ 300ms)
+-- ฟีเจอร์หลัก: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, ScreenTap (Auto Tap) เปิด/ปิด
+-- หมายเหตุ: ฟีเจอร์ ScreenTap จะ "แตะ" ที่กลางหน้าจอซ้ำๆ ทุก 0.3 วินาที (มือถือ/PC ที่รองรับเท่านั้น)
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
--- ---------- Frame & Style ----------
+--------------------- Main Utility Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 350)
+frame.Size = UDim2.new(0, 390, 0, 380)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
@@ -70,7 +70,6 @@ local statusColors = {
 local darkbtn = Color3.fromRGB(47,52,65)
 local bluebtn = Color3.fromRGB(66,117,143)
 
--- ---------- Utility Buttons ----------
 -- 1. AntiFling
 local antiflingCircle = makeStatusCircle(frame, statusColors.off, y0)
 local antiflingBtn = Instance.new("TextButton", frame)
@@ -140,29 +139,20 @@ antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 
--- 6. AutoClicker (เลือกพิกัด, copy ไป clipboard, กรอกใน OP Auto Clicker)
-local autoclickerCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
-local autoclickerPickBtn = Instance.new("TextButton", frame)
-autoclickerPickBtn.Size = UDim2.new(0, 110, 0, 28)
-autoclickerPickBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
-autoclickerPickBtn.Text = "เลือกพิกัด"
-autoclickerPickBtn.Font = Enum.Font.GothamBold
-autoclickerPickBtn.TextSize = 15
-autoclickerPickBtn.BackgroundColor3 = bluebtn
-autoclickerPickBtn.TextColor3 = Color3.new(1,1,1)
-autoclickerPickBtn.BorderSizePixel = 0
+-- 6. Auto Screen Tap (คลิกจออัตโนมัติ)
+local screentapCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
+local screentapBtn = Instance.new("TextButton", frame)
+screentapBtn.Size = UDim2.new(0, 210, 0, 28)
+screentapBtn.Position = UDim2.new(0, leftX+28, 0, y0+rowH*5+4)
+screentapBtn.Text = "Screen Tap : ปิด"
+screentapBtn.Font = Enum.Font.GothamBold
+screentapBtn.TextSize = 16
+screentapBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
+screentapBtn.TextColor3 = Color3.new(1,1,1)
+screentapBtn.BorderSizePixel = 0
 
-local coordLabel = Instance.new("TextLabel", frame)
-coordLabel.Size = UDim2.new(0, 200, 0, 22)
-coordLabel.Position = UDim2.new(0, leftX+28, 0, y0+rowH*6+8)
-coordLabel.Font = Enum.Font.Gotham
-coordLabel.TextSize = 13
-coordLabel.TextColor3 = Color3.fromRGB(230,230,230)
-coordLabel.BackgroundTransparency = 1
-coordLabel.Text = "Click or press Esc to pick"
-coordLabel.Visible = false
+-------------------- LOGIC (Utility) ------------------
 
--- ---------- LOGIC: Utility ----------
 -- 1. AntiFling
 local antiflingEnabled = false
 local function setAntiFling(state)
@@ -221,7 +211,6 @@ player.CharacterAdded:Connect(function(char)
         local hrp = char:WaitForChild("HumanoidRootPart", 3)
         if hrp then hrp.CFrame = CFrame.new(spawnPos) end
     end
-    -- Setup AutoTP ใหม่ทุกครั้งที่เกิด
     if autoTP_HUMANOID then pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end) end
     autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
     if autoTP_HUMANOID then
@@ -277,41 +266,30 @@ local function setAntiIdle(state)
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--- 6. AutoClicker for OP Auto Clicker (choose pos, copy to clipboard for user to paste)
-local autoclickerPos = nil
-autoclickerPickBtn.MouseButton1Click:Connect(function()
-    coordLabel.Text = "Click or press Esc to pick"
-    coordLabel.Visible = true
-    autoclickerPickBtn.Text = "เลือกพิกัด..."
-    local pickConn, escConn
-    pickConn = UserInputService.InputBegan:Connect(function(input, gp)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = UserInputService:GetMouseLocation()
-            autoclickerPos = Vector2.new(mousePos.X, mousePos.Y)
-            coordLabel.Text = "X:"..math.floor(autoclickerPos.X).." Y:"..math.floor(autoclickerPos.Y).." (คัดลอกแล้ว!)"
-            coordLabel.Visible = true
-            autoclickerPickBtn.Text = "เลือกพิกัด"
-            -- copy ไป clipboard ให้ user เอาไปกรอกใน OP Auto Clicker
-            if setclipboard then
-                setclipboard(tostring(math.floor(autoclickerPos.X)).." "..tostring(math.floor(autoclickerPos.Y)))
+-- 6. Screen Tap (Auto Tap ที่จอ)
+local screentapEnabled = false
+local screentapConn = nil
+local tapDelay = 0.3
+
+local function setScreenTap(state)
+    screentapEnabled = state
+    screentapBtn.Text = "Screen Tap : " .. (screentapEnabled and "เปิด" or "ปิด")
+    screentapBtn.BackgroundColor3 = screentapEnabled and statusColors.on or Color3.fromRGB(56, 100, 125)
+    screentapCircle.BackgroundColor3 = screentapEnabled and statusColors.on or statusColors.off
+    if screentapConn then screentapConn:Disconnect() screentapConn = nil end
+    if screentapEnabled then
+        screentapConn = game:GetService("RunService").RenderStepped:Connect(function()
+            if screentapEnabled then
+                -- แตะกลางจอ (มือถือจะทำงาน, PC ส่วนใหญ่จะไม่เห็นผล)
+                local cam = workspace.CurrentCamera
+                local vp = cam.ViewportSize
+                UserInputService:TouchTap(Vector2.new(vp.X/2, vp.Y/2), 0)
+                wait(tapDelay)
             end
-            pickConn:Disconnect()
-            if escConn then escConn:Disconnect() end
-        elseif input.KeyCode == Enum.KeyCode.Escape then
-            coordLabel.Visible = false
-            autoclickerPickBtn.Text = "เลือกพิกัด"
-            pickConn:Disconnect()
-            if escConn then escConn:Disconnect() end
-        end
-    end)
-    escConn = pickConn
+        end)
+    end
+end
+
+screentapBtn.MouseButton1Click:Connect(function()
+    setScreenTap(not screentapEnabled)
 end)
-
--- =========== วิธีใช้ AutoClicker กับ OP Auto Clicker ===========
--- 1. กด "เลือกพิกัด" ใน Roblox GUI แล้วคลิกที่จุดที่ต้องการบนหน้าจอ
--- 2. สังเกตดูค่า X Y จะแสดงและจะ copy ไป clipboard อัตโนมัติ
--- 3. เปิดโปรแกรม OP Auto Clicker 3.0 แล้ววางค่า X Y ในช่อง X,Y (หรือกรอกเอง)
--- 4. กำหนด Interval (ms), Click type, Repeat ตามต้องการ แล้ว "Start" (F1) เพื่อให้ Auto Clicker คลิกที่จุดนั้น
--- หมายเหตุ: Roblox Script ไม่สามารถคลิกเองได้นอกจากจะใช้ executor/โปรแกรมภายนอก
-
--- (ฟีเจอร์อื่นสามารถรวมเข้าตามที่โค้ดนี้แสดง)
