@@ -1,5 +1,5 @@
--- Ultimate Utility GUI : AntiFling, Set Spawn (2 จุด), AutoTP (HP<10%), DiedTP (กดปุ่มและทำงานเร็ว), Drag GUI, Hide/Show GUI
--- DiedTP: มีปุ่มกด, อัปเดต deathPos ไวขึ้น
+-- Ultimate Utility GUI (Style ตามภาพแนบ, สถานะจุด, ปุ่ม DiedTP, วงกลมสถานะ)
+-- ฟีเจอร์: AntiFling, AutoTP (วาป HP<10%, จุดแยก), Set Spawn, DiedTP (กดปุ่ม), Drag GUI, ทุกอย่างทำงานได้
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -7,10 +7,10 @@ gui.Name = "UltimateUtilityGUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 370, 0, 290)
+frame.Size = UDim2.new(0, 360, 0, 170)
 frame.Position = UDim2.new(0, 40, 0, 110)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
-frame.BackgroundTransparency = 0.1
+frame.BackgroundTransparency = 0.13
 frame.BorderSizePixel = 0
 
 -- DRAGGABLE GUI (drag by title bar)
@@ -40,28 +40,6 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Hide/Show GUI Button
-local hideBtn = Instance.new("TextButton", gui)
-hideBtn.Size = UDim2.new(0, 36, 0, 36)
-hideBtn.Position = UDim2.new(0, 10, 0, 60)
-hideBtn.BackgroundColor3 = Color3.fromRGB(36, 38, 49)
-hideBtn.Text = "⏷"
-hideBtn.Font = Enum.Font.GothamBold
-hideBtn.TextSize = 19
-hideBtn.TextColor3 = Color3.fromRGB(255, 222, 110)
-hideBtn.AutoButtonColor = true
-hideBtn.ZIndex = 2
-
-local guiVisible = true
-local function setGuiVisible(state)
-    guiVisible = state
-    frame.Visible = guiVisible
-    hideBtn.Text = guiVisible and "⏷" or "⏵"
-end
-hideBtn.MouseButton1Click:Connect(function()
-    setGuiVisible(not guiVisible)
-end)
-
 -- Title bar
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 36)
@@ -72,13 +50,13 @@ title.TextSize = 20
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 235, 110)
 
-local y = 44
+local y = 36
 
 -- Helper: สถานะวงกลม
 local function makeStatusCircle(parent, color, y)
     local cir = Instance.new("Frame", parent)
-    cir.Size = UDim2.new(0, 16, 0, 16)
-    cir.Position = UDim2.new(0, 10, 0, y)
+    cir.Size = UDim2.new(0, 18, 0, 18)
+    cir.Position = UDim2.new(0, 8, 0, y)
     cir.BackgroundColor3 = color
     cir.BorderSizePixel = 0
     cir.Name = "StatusCircle"
@@ -87,101 +65,105 @@ local function makeStatusCircle(parent, color, y)
     return cir
 end
 
+local statusColors = {
+    on = Color3.fromRGB(80,210,80),
+    off = Color3.fromRGB(210,50,50)
+}
+
 -- 1. AntiFling
-local antiflingCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+local antiflingCircle = makeStatusCircle(frame, statusColors.off, y+8)
 local antiflingBtn = Instance.new("TextButton", frame)
-antiflingBtn.Size = UDim2.new(0, 120, 0, 24)
-antiflingBtn.Position = UDim2.new(0, 32, 0, y)
+antiflingBtn.Size = UDim2.new(0, 122, 0, 28)
+antiflingBtn.Position = UDim2.new(0, 32, 0, y+5)
 antiflingBtn.Text = "AntiFling : ปิด"
 antiflingBtn.Font = Enum.Font.GothamBold
-antiflingBtn.TextSize = 14
+antiflingBtn.TextSize = 16
 antiflingBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 antiflingBtn.TextColor3 = Color3.new(1,1,1)
+antiflingBtn.BorderSizePixel = 0
+antiflingBtn.AutoButtonColor = true
 
--- 2. Auto TP (เลือดต่ำวาป: จุดแยกจาก Spawn)
-y = y + 38
-local autotpcircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+-- 2. AutoTP
+y = y + 33
+local autotpcircle = makeStatusCircle(frame, statusColors.off, y+8)
 local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 120, 0, 24)
-autotpswitch.Position = UDim2.new(0, 32, 0, y)
+autotpswitch.Size = UDim2.new(0, 122, 0, 28)
+autotpswitch.Position = UDim2.new(0, 32, 0, y+5)
 autotpswitch.Text = "AutoTP : ปิด"
 autotpswitch.Font = Enum.Font.GothamBold
-autotpswitch.TextSize = 14
+autotpswitch.TextSize = 16
 autotpswitch.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 autotpswitch.TextColor3 = Color3.new(1,1,1)
+autotpswitch.BorderSizePixel = 0
 
 local autosetBtn = Instance.new("TextButton", frame)
-autosetBtn.Size = UDim2.new(0, 90, 0, 24)
-autosetBtn.Position = UDim2.new(0, 160, 0, y)
+autosetBtn.Size = UDim2.new(0, 90, 0, 28)
+autosetBtn.Position = UDim2.new(0, 170, 0, y+5)
 autosetBtn.Text = "Set AutoTP"
 autosetBtn.Font = Enum.Font.GothamBold
-autosetBtn.TextSize = 13
+autosetBtn.TextSize = 14
 autosetBtn.BackgroundColor3 = Color3.fromRGB(56, 100, 125)
 autosetBtn.TextColor3 = Color3.new(1,1,1)
+autosetBtn.BorderSizePixel = 0
+autosetBtn.AutoButtonColor = true
 
 local autotpinfo = Instance.new("TextLabel", frame)
-autotpinfo.Size = UDim2.new(1, -260, 0, 24)
-autotpinfo.Position = UDim2.new(0, 255, 0, y)
-autotpinfo.Text = "ยังไม่ตั้งจุด"
+autotpinfo.Size = UDim2.new(0, 135, 0, 28)
+autotpinfo.Position = UDim2.new(0, 270, 0, y+5)
+autotpinfo.Text = ""
 autotpinfo.Font = Enum.Font.Gotham
-autotpinfo.TextSize = 12
-autotpinfo.TextColor3 = Color3.fromRGB(180,220,220)
+autotpinfo.TextSize = 14
+autotpinfo.TextColor3 = Color3.fromRGB(80,210,80)
 autotpinfo.BackgroundTransparency = 1
 autotpinfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 3. Set Spawn (จุดเกิดเอง)
-y = y + 38
-local spawnCircle = makeStatusCircle(frame, Color3.fromRGB(210, 210, 50), y+2)
+-- 3. Set Spawn
+y = y + 33
+local spawnCircle = makeStatusCircle(frame, statusColors.off, y+8)
 local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 120, 0, 24)
-spawnBtn.Position = UDim2.new(0, 32, 0, y)
+spawnBtn.Size = UDim2.new(0, 122, 0, 28)
+spawnBtn.Position = UDim2.new(0, 32, 0, y+5)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
-spawnBtn.TextSize = 14
+spawnBtn.TextSize = 16
 spawnBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 spawnBtn.TextColor3 = Color3.new(1,1,1)
+spawnBtn.BorderSizePixel = 0
+spawnBtn.AutoButtonColor = true
 
 local spawnInfo = Instance.new("TextLabel", frame)
-spawnInfo.Size = UDim2.new(1, -160, 0, 24)
-spawnInfo.Position = UDim2.new(0, 160, 0, y)
-spawnInfo.Text = "ยังไม่ตั้งจุดเกิด"
+spawnInfo.Size = UDim2.new(0, 220, 0, 28)
+spawnInfo.Position = UDim2.new(0, 170, 0, y+5)
+spawnInfo.Text = ""
 spawnInfo.Font = Enum.Font.Gotham
-spawnInfo.TextSize = 12
-spawnInfo.TextColor3 = Color3.fromRGB(255,255,110)
+spawnInfo.TextSize = 14
+spawnInfo.TextColor3 = Color3.fromRGB(80,210,80)
 spawnInfo.BackgroundTransparency = 1
 spawnInfo.TextXAlignment = Enum.TextXAlignment.Left
 
--- 4. DiedTP (ปุ่มกด + ทำงานไว)
-y = y + 38
-local diedtpCircle = makeStatusCircle(frame, Color3.fromRGB(210, 50, 50), y+2)
+-- 4. DiedTP
+y = y + 33
+local diedtpCircle = makeStatusCircle(frame, statusColors.off, y+8)
 local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 120, 0, 24)
-diedtpBtn.Position = UDim2.new(0, 32, 0, y)
+diedtpBtn.Size = UDim2.new(0, 122, 0, 28)
+diedtpBtn.Position = UDim2.new(0, 32, 0, y+5)
 diedtpBtn.Text = "DiedTP"
 diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 14
+diedtpBtn.TextSize = 16
 diedtpBtn.BackgroundColor3 = Color3.fromRGB(48, 54, 68)
 diedtpBtn.TextColor3 = Color3.new(1,1,1)
+diedtpBtn.BorderSizePixel = 0
+diedtpBtn.AutoButtonColor = true
 
 local diedtpInfo = Instance.new("TextLabel", frame)
-diedtpInfo.Size = UDim2.new(1, -160, 0, 24)
-diedtpInfo.Position = UDim2.new(0, 160, 0, y)
-diedtpInfo.Text = "ยังไม่ตาย"
+diedtpInfo.Size = UDim2.new(0, 220, 0, 28)
+diedtpInfo.Position = UDim2.new(0, 170, 0, y+5)
+diedtpInfo.Text = ""
 diedtpInfo.Font = Enum.Font.Gotham
-diedtpInfo.TextSize = 12
-diedtpInfo.TextColor3 = Color3.fromRGB(240,180,180)
+diedtpInfo.TextSize = 14
+diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
 diedtpInfo.BackgroundTransparency = 1
 diedtpInfo.TextXAlignment = Enum.TextXAlignment.Left
-
--- ท้ายสุด
-local tip = Instance.new("TextLabel", frame)
-tip.Size = UDim2.new(1, -20, 0, 28)
-tip.Position = UDim2.new(0, 10, 0, 244)
-tip.Text = "ลาก GUI ได้ | Hide GUI | DiedTP เร็วขึ้นและมีปุ่มกด"
-tip.Font = Enum.Font.Gotham
-tip.TextSize = 12
-tip.TextColor3 = Color3.fromRGB(200,255,190)
-tip.BackgroundTransparency = 1
 
 ---------------------------- LOGIC ----------------------------
 
@@ -190,7 +172,7 @@ local antiflingEnabled = false
 local function setAntiFling(state)
     antiflingEnabled = state
     antiflingBtn.Text = "AntiFling : " .. (state and "เปิด" or "ปิด")
-    antiflingCircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
+    antiflingCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
 end
 antiflingBtn.MouseButton1Click:Connect(function()
     setAntiFling(not antiflingEnabled)
@@ -222,17 +204,17 @@ local autoTP_HUMANOID = nil
 local function updateAutoTPInfo()
     if autotpPos then
         autotpinfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", autotpPos.X, autotpPos.Y, autotpPos.Z)
-        autotpinfo.TextColor3 = Color3.fromRGB(80,210,80)
+        autotpcircle.BackgroundColor3 = autotpenabled and statusColors.on or statusColors.off
     else
-        autotpinfo.Text = "ยังไม่ตั้งจุด"
-        autotpinfo.TextColor3 = Color3.fromRGB(180,220,220)
+        autotpinfo.Text = ""
+        autotpcircle.BackgroundColor3 = autotpenabled and statusColors.on or statusColors.off
     end
 end
 
 local function setAutoTP(state)
     autotpenabled = state
     autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
-    autotpcircle.BackgroundColor3 = state and Color3.fromRGB(80,210,80) or Color3.fromRGB(210,50,50)
+    updateAutoTPInfo()
 end
 autotpswitch.MouseButton1Click:Connect(function()
     setAutoTP(not autotpenabled)
@@ -248,13 +230,20 @@ updateAutoTPInfo()
 
 -- 3. Set Spawn
 local spawnPos
+local function updateSpawnInfo()
+    if spawnPos then
+        spawnInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", spawnPos.X, spawnPos.Y, spawnPos.Z)
+        spawnCircle.BackgroundColor3 = statusColors.on
+    else
+        spawnInfo.Text = ""
+        spawnCircle.BackgroundColor3 = statusColors.off
+    end
+end
 spawnBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         spawnPos = char.HumanoidRootPart.Position
-        spawnCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
-        spawnInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", spawnPos.X, spawnPos.Y, spawnPos.Z)
-        spawnInfo.TextColor3 = Color3.fromRGB(80,210,80)
+        updateSpawnInfo()
     end
 end)
 player.CharacterAdded:Connect(function(char)
@@ -276,7 +265,6 @@ player.CharacterAdded:Connect(function(char)
                 if c and c:FindFirstChild("HumanoidRootPart") then
                     c.HumanoidRootPart.CFrame = CFrame.new(autotpPos)
                 end
-                autotpinfo.Text = "วาร์ปฉุกเฉิน (HP<10%)"
                 wait(0.5)
                 teleporting = false
                 updateAutoTPInfo()
@@ -285,11 +273,20 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 4. DiedTP (บันทึกจุดตายล่าสุดทันที & กดปุ่มวาร์ป)
+-- 4. DiedTP (ไวและปุ่มกด)
 local deathPos = nil
+local function updateDiedTPInfo()
+    if deathPos then
+        diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
+        diedtpCircle.BackgroundColor3 = statusColors.on
+    else
+        diedtpInfo.Text = ""
+        diedtpCircle.BackgroundColor3 = statusColors.off
+    end
+end
 player.CharacterAdded:Connect(function(char)
     local hum = char:WaitForChild("Humanoid")
-    -- ปรับให้เซ็ต deathPos ไวขึ้น (ใช้ Stepped ตรวจสอบ)
+    -- อัปเดต deathPos ไวขึ้น
     local diedFlag = false
     hum.Died:Connect(function()
         diedFlag = true
@@ -297,9 +294,7 @@ player.CharacterAdded:Connect(function(char)
     game:GetService("RunService").Stepped:Connect(function()
         if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
             deathPos = char.HumanoidRootPart.Position
-            diedtpCircle.BackgroundColor3 = Color3.fromRGB(80,210,80)
-            diedtpInfo.Text = string.format("X:%.1f Y:%.1f Z:%.1f", deathPos.X, deathPos.Y, deathPos.Z)
-            diedtpInfo.TextColor3 = Color3.fromRGB(80,210,80)
+            updateDiedTPInfo()
             diedFlag = false
         end
     end)
@@ -310,3 +305,8 @@ diedtpBtn.MouseButton1Click:Connect(function()
         char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
     end
 end)
+
+-- อัปเดตสถานะเริ่มต้น
+updateSpawnInfo()
+updateAutoTPInfo()
+updateDiedTPInfo()
