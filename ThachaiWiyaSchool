@@ -1,5 +1,5 @@
--- Ultimate Utility GUI (Style ตามภาพแนบ, สถานะจุด, ปุ่ม DiedTP, วงกลมสถานะ)
--- ฟีเจอร์: AntiFling, AutoTP (วาป HP<10%, จุดแยก), Set Spawn, DiedTP (กดปุ่ม), Drag GUI, ทุกอย่างทำงานได้
+-- Ultimate Utility GUI (Style ตามภาพ, Set Spawn ทับจุดเดิมทันที, ไม่มี delay/รอ)
+-- ฟีเจอร์: AntiFling, AutoTP (วาป HP<10%, จุดแยก), Set Spawn (เขียนทับทันที), DiedTP (กดปุ่ม), Drag GUI
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -228,7 +228,7 @@ autosetBtn.MouseButton1Click:Connect(function()
 end)
 updateAutoTPInfo()
 
--- 3. Set Spawn
+-- 3. Set Spawn (แก้ไขใหม่: บันทึกพิกัดใหม่ ทับทันที ไม่มี delay)
 local spawnPos
 local function updateSpawnInfo()
     if spawnPos then
@@ -247,9 +247,8 @@ spawnBtn.MouseButton1Click:Connect(function()
     end
 end)
 player.CharacterAdded:Connect(function(char)
-    wait(0.1)
     if spawnPos then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hrp = char:WaitForChild("HumanoidRootPart", 3)
         if hrp then hrp.CFrame = CFrame.new(spawnPos) end
     end
     -- Setup AutoTP ใหม่ทุกครั้งที่เกิด
