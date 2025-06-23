@@ -1,7 +1,5 @@
--- Stand Power GUI + Ultimate Utility GUI (ตัดช่อง autoclick bar + label ออกตามภาพ)
--- หัว GUI: STAND (เหลือง) + POWER (ม่วง) แบบ 2 บรรทัด
--- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle (ไม่มีช่องพิมพ์ autoclick)
--- ไม่มี Screen Tap
+-- Stand Power GUI + Ultimate Utility GUI + TP To Player by Typing Short Name (รวมฟีเจอร์ทั้งหมดในหน้าต่างเดียว)
+-- ฟีเจอร์: AntiFling, AutoTP, Set Spawn, DiedTP, AntiIdle, TP ไปหาผู้เล่นโดยพิมพ์ชื่อ/ย่อชื่อ
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -10,8 +8,8 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Stand Power Frame ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 390, 0, 430)
-frame.Position = UDim2.new(0, 40, 0, 110)
+frame.Size = UDim2.new(0, 420, 0, 490)
+frame.Position = UDim2.new(0, 40, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BorderSizePixel = 0
 
@@ -156,6 +154,49 @@ antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
 
+-- 6. TP TO PLAYER BAR
+local tpLabel = Instance.new("TextLabel", frame)
+tpLabel.Size = UDim2.new(0, 395, 0, 22)
+tpLabel.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+6)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Font = Enum.Font.Gotham
+tpLabel.TextSize = 14
+tpLabel.TextColor3 = Color3.fromRGB(255, 235, 110)
+tpLabel.Text = "TP ไปหาผู้เล่น: พิมพ์ชื่อหรือย่อ แล้วกด TP"
+tpLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local tpBox = Instance.new("TextBox", frame)
+tpBox.Size = UDim2.new(0, 220, 0, 28)
+tpBox.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+32)
+tpBox.Font = Enum.Font.Gotham
+tpBox.TextSize = 15
+tpBox.TextColor3 = Color3.fromRGB(200, 255, 200)
+tpBox.PlaceholderText = "ชื่อหรือย่อชื่อผู้เล่น"
+tpBox.ClearTextOnFocus = false
+tpBox.BackgroundColor3 = Color3.fromRGB(47,52,65)
+tpBox.Text = ""
+tpBox.BorderSizePixel = 0
+
+local tpBtn = Instance.new("TextButton", frame)
+tpBtn.Size = UDim2.new(0, 60, 0, 28)
+tpBtn.Position = UDim2.new(0, leftX+4+230, 0, y0+rowH*5+32)
+tpBtn.Text = "TP"
+tpBtn.Font = Enum.Font.GothamBold
+tpBtn.TextSize = 15
+tpBtn.BackgroundColor3 = Color3.fromRGB(80,130,255)
+tpBtn.TextColor3 = Color3.new(1,1,1)
+tpBtn.BorderSizePixel = 0
+
+local tpInfo = Instance.new("TextLabel", frame)
+tpInfo.Size = UDim2.new(0, 340, 0, 20)
+tpInfo.Position = UDim2.new(0, leftX+4, 0, y0+rowH*5+62)
+tpInfo.BackgroundTransparency = 1
+tpInfo.Font = Enum.Font.Gotham
+tpInfo.TextSize = 13
+tpInfo.TextColor3 = Color3.fromRGB(255,255,180)
+tpInfo.Text = ""
+tpInfo.TextXAlignment = Enum.TextXAlignment.Left
+
 -------------------- LOGIC (Utility) ------------------
 
 -- 1. AntiFling
@@ -271,4 +312,38 @@ local function setAntiIdle(state)
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--------------------- End of Script --------------------
+-- 6. TP TO PLAYER LOGIC
+local function findPlayerByShortName(txt)
+    txt = txt:lower()
+    for i,v in pairs(game.Players:GetPlayers()) do
+        if v ~= player and v.Name:lower():sub(1, #txt) == txt then
+            return v
+        end
+    end
+    for i,v in pairs(game.Players:GetPlayers()) do
+        if v ~= player and v.DisplayName:lower():find(txt, 1, true) then
+            return v
+        end
+    end
+    return nil
+end
+
+tpBtn.MouseButton1Click:Connect(function()
+    local txt = tpBox.Text
+    if txt == "" then
+        tpInfo.Text = "กรุณากรอกชื่อบางส่วนของผู้เล่น"
+        return
+    end
+    local target = findPlayerByShortName(txt)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local myChar = player.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,2,0)
+            tpInfo.Text = "TP ไปหา "..target.Name
+        else
+            tpInfo.Text = "ไม่พบตัวละครคุณเอง"
+        end
+    else
+        tpInfo.Text = "ไม่พบผู้เล่นเป้าหมาย"
+    end
+end)
