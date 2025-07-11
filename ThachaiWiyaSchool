@@ -465,3 +465,29 @@ mouse.Button1Down:Connect(function()
         end
     end
 end)
+
+-- =========================
+-- Auto Respawn (เกิดใหม่อัตโนมัติ)
+-- =========================
+local Players = game:GetService("Players")
+-- ใช้ player ที่ประกาศไปแล้วด้านบน
+
+local function autoRespawnHook(char)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(function()
+            -- รอ 1 วินาที (ปรับได้ เช่น 0.5, 2)
+            wait(1)
+            -- ถ้ายังไม่มีตัวละคร เกิดใหม่
+            if player and player.Character == nil then
+                player:LoadCharacter()
+            end
+        end)
+    end
+end
+
+-- ติดตั้ง hook เมื่อเข้าเกมและเกิดใหม่
+if player.Character then
+    autoRespawnHook(player.Character)
+end
+player.CharacterAdded:Connect(autoRespawnHook)
