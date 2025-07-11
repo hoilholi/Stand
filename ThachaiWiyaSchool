@@ -466,116 +466,165 @@ mouse.Button1Down:Connect(function()
     end
 end)
 
--- =========================
--- Auto Respawn (เกิดใหม่อัตโนมัติ)
--- =========================
-local Players = game:GetService("Players")
--- ใช้ player ที่ประกาศไปแล้วด้านบน
+-------------------- UNIVERSAL ANTI-DEBUFF + ANTI-SWITCH (ไม่ซ้ำ) ------------------
 
+local UIS = game:GetService("UserInputService")
+local NORMAL_WALKSPEED = 16
+local NORMAL_JUMPPOWER = 50
+
+-- ฟังก์ชันป้องกันสถานะผิดปกติและบล็อกการสลับอาวุธ
+local function fixHumanoid(humanoid)
+    if not humanoid then return end
+
+    -- ป้องกัน debuff ทุกชนิด
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.PlatformStand then humanoid.PlatformStand = false end
+            if humanoid.Sit then humanoid.Sit = false end
+            if humanoid:GetState() == Enum.HumanoidStateType.Physics
+            or humanoid:GetState() == Enum.HumanoidStateType.FallingDown
+            or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll
+            or humanoid:GetState() == Enum.HumanoidStateType.Seated
+            or humanoid:GetState() == Enum.HumanoidStateType.PlatformStanding then
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+            wait(0.05)
+        end
+    end)
+    -- ป้องกัน slow/freeze/root
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.WalkSpeed < NORMAL_WALKSPEED then
+                humanoid.WalkSpeed = NORMAL_WALKSPEED
+            end
+            if humanoid.JumpPower < NORMAL_JUMPPOWER then
+                humanoid.JumpPower = NORMAL_JUMPPOWER
+            end
+            if humanoid.WalkSpeed > 100 then
+                humanoid.WalkSpeed = NORMAL_WALKSPEED
+            end
+            wait(0.05)
+        end
+    end)
+    -- คืน tool หากโดนบังคับถอด
+    local bp = player.Backpack
+    humanoid.ChildRemoved:Connect(function(child)
+        if child:IsA("Tool") then
+            wait(0.1)
+            if bp:FindFirstChild(child.Name) then
+                bp[child.Name].Parent = player.Character
+            end
+        end
+    end)
+    -- กันโดน destroy tool (เท่าที่ Roblox อนุญาต)
+    bp.ChildRemoved:Connect(function(tool)
+        wait(0.1)
+        if tool and not bp:FindFirstChild(tool.Name) and not (player.Character and player.Character:FindFirstChild(tool.Name)) then
+            tool.Parent = bp
+        end
+    end)
+end
+
+local function hookAll()
+    local char = player.Character
+    if not char then return end
+    local human = char:FindFirstChildOfClass("Humanoid")
+    if human then
+        fixHumanoid(human)
+    end
+end
+if player.Character then hookAll() end
+player.CharacterAdded:Connect(hookAll)
+
+-- สลับอาวุธ/Tool ด้วยปุ่ม 1-9 และ MouseWheel
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    -- Hotkey 1-9
+    if gameProcessed then
+        local keyNum = tonumber(input.KeyCode.Name:match("(%d)"))
+        if keyNum and keyNum >= 1 and keyNum <= 9 then
+            local tools = {}
+            for _, tool in ipairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") then table.insert(tools, tool) end
+            end
+            local tool = tools[keyNum]
+            if tool then
+                tool.Parent = player.Character
+            end
+        end
+    end
+    -- MouseWheel
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local function getTools()
+            local tools = {}
+            for _, tool in ipairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") then table.insert(tools, tool) end
+            end
+            return tools
+        end
+        local function equipNextTool()
+            local tools = getTools()
+            if #tools == 0 then return end
+            local current = player.Character and player.Character:FindFirstChildOfClass("Tool")
+            local idx = 1
+            if current then
+                for i, tool in ipairs(tools) do
+                    if tool == current then
+                        idx = i % #tools + 1
+                        break
+                    end
+                end
+            end
+            tools[idx].Parent = player.Character
+        end
+        local function equipPreviousTool()
+            local tools = getTools()
+            if #tools == 0 then return end
+            local current = player.Character and player.Character:FindFirstChildOfClass("Tool")
+            local idx = #tools
+            if current then
+                for i, tool in ipairs(tools) do
+                    if tool == current then
+                        idx = (i-2) % #tools + 1
+                        break
+                    end
+                end
+            end
+            tools[idx].Parent = player.Character
+        end
+        if input.Position.Z > 0 then
+            equipNextTool()
+        elseif input.Position.Z < 0 then
+            equipPreviousTool()
+        end
+    end
+end)
+
+-- ป้องกันโดนบังคับ unequip/คืน Tool อัตโนมัติ
+player.Backpack.ChildRemoved:Connect(function(tool)
+    wait(0.1)
+    if tool and not player.Character:FindFirstChild(tool.Name) and not player.Backpack:FindFirstChild(tool.Name) then
+        tool.Parent = player.Backpack
+    end
+end)
+
+player.Backpack.ChildAdded:Connect(function(tool)
+    wait(0.1)
+    if tool and player.Character and not player.Character:FindFirstChildOfClass("Tool") then
+        tool.Parent = player.Character
+    end
+end)
+
+-- Auto Respawn เมื่อโดน kill
 local function autoRespawnHook(char)
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid.Died:Connect(function()
-            -- รอ 1 วินาที (ปรับได้ เช่น 0.5, 2)
             wait(1)
-            -- ถ้ายังไม่มีตัวละคร เกิดใหม่
             if player and player.Character == nil then
                 player:LoadCharacter()
             end
         end)
     end
 end
-
--- ติดตั้ง hook เมื่อเข้าเกมและเกิดใหม่
-if player.Character then
-    autoRespawnHook(player.Character)
-end
+if player.Character then autoRespawnHook(player.Character) end
 player.CharacterAdded:Connect(autoRespawnHook)
-
--- Anti-Stun / Anti-Knockback / Anti-Ragdoll (กันการชะงัก/กระเด็น/ล้ม)
-local player = game.Players.LocalPlayer
-
-local function antiStunHook(char)
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    -- กัน PlatformStand (ล้ม/กระเด็น)
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.PlatformStand then
-                humanoid.PlatformStand = false
-            end
-            wait(0.05)
-        end
-    end)
-
-    -- กัน Sit (นั่งบังคับ)
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.Sit then
-                humanoid.Sit = false
-            end
-            wait(0.05)
-        end
-    end)
-
-    -- กัน StateType ที่เกี่ยวกับการล้ม/ชะงัก
-    humanoid.StateChanged:Connect(function(_, newState)
-        if newState == Enum.HumanoidStateType.Physics
-        or newState == Enum.HumanoidStateType.FallingDown
-        or newState == Enum.HumanoidStateType.PlatformStanding
-        or newState == Enum.HumanoidStateType.Ragdoll
-        or newState == Enum.HumanoidStateType.Seated then
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end)
-end
-
-if player.Character then
-    antiStunHook(player.Character)
-end
-player.CharacterAdded:Connect(antiStunHook)
-
--- Iron Body (ร่างกายเหล็ก): กันกระเด็น กันล้ม กันชะงัก กัน ragdoll/stun
-local player = game.Players.LocalPlayer
-
-local function ironBodyHook(char)
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    -- กัน PlatformStand (กันกระเด็น/ล้ม)
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.PlatformStand then
-                humanoid.PlatformStand = false
-            end
-            wait(0.05)
-        end
-    end)
-
-    -- กัน Sit (กันนั่งบังคับ)
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.Sit then
-                humanoid.Sit = false
-            end
-            wait(0.05)
-        end
-    end)
-
-    -- กัน StateType ที่ทำให้ล้ม/ชะงัก/ragdoll/stun
-    humanoid.StateChanged:Connect(function(_, newState)
-        if newState == Enum.HumanoidStateType.Physics
-        or newState == Enum.HumanoidStateType.FallingDown
-        or newState == Enum.HumanoidStateType.PlatformStanding
-        or newState == Enum.HumanoidStateType.Ragdoll
-        or newState == Enum.HumanoidStateType.Seated then
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end)
-end
-
-if player.Character then
-    ironBodyHook(player.Character)
-end
-player.CharacterAdded:Connect(ironBodyHook)
