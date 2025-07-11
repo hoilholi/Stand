@@ -491,3 +491,91 @@ if player.Character then
     autoRespawnHook(player.Character)
 end
 player.CharacterAdded:Connect(autoRespawnHook)
+
+-- Anti-Stun / Anti-Knockback / Anti-Ragdoll (กันการชะงัก/กระเด็น/ล้ม)
+local player = game.Players.LocalPlayer
+
+local function antiStunHook(char)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- กัน PlatformStand (ล้ม/กระเด็น)
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.PlatformStand then
+                humanoid.PlatformStand = false
+            end
+            wait(0.05)
+        end
+    end)
+
+    -- กัน Sit (นั่งบังคับ)
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.Sit then
+                humanoid.Sit = false
+            end
+            wait(0.05)
+        end
+    end)
+
+    -- กัน StateType ที่เกี่ยวกับการล้ม/ชะงัก
+    humanoid.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.Physics
+        or newState == Enum.HumanoidStateType.FallingDown
+        or newState == Enum.HumanoidStateType.PlatformStanding
+        or newState == Enum.HumanoidStateType.Ragdoll
+        or newState == Enum.HumanoidStateType.Seated then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end)
+end
+
+if player.Character then
+    antiStunHook(player.Character)
+end
+player.CharacterAdded:Connect(antiStunHook)
+
+-- Iron Body (ร่างกายเหล็ก): กันกระเด็น กันล้ม กันชะงัก กัน ragdoll/stun
+local player = game.Players.LocalPlayer
+
+local function ironBodyHook(char)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- กัน PlatformStand (กันกระเด็น/ล้ม)
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.PlatformStand then
+                humanoid.PlatformStand = false
+            end
+            wait(0.05)
+        end
+    end)
+
+    -- กัน Sit (กันนั่งบังคับ)
+    spawn(function()
+        while humanoid.Parent do
+            if humanoid.Sit then
+                humanoid.Sit = false
+            end
+            wait(0.05)
+        end
+    end)
+
+    -- กัน StateType ที่ทำให้ล้ม/ชะงัก/ragdoll/stun
+    humanoid.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.Physics
+        or newState == Enum.HumanoidStateType.FallingDown
+        or newState == Enum.HumanoidStateType.PlatformStanding
+        or newState == Enum.HumanoidStateType.Ragdoll
+        or newState == Enum.HumanoidStateType.Seated then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+    end)
+end
+
+if player.Character then
+    ironBodyHook(player.Character)
+end
+player.CharacterAdded:Connect(ironBodyHook)
