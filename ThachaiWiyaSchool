@@ -1,6 +1,5 @@
--- Stand Power GUI (Mini, Transparent, No AntiFling, No Go To Spawn Point)
--- ฟีเจอร์: AutoTP, Loop AutoTP, Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin (Auto Rejoin เปิดปิดเองทุก 0.2 วินาที, Script v9)
--- จัดเรียงปุ่ม/label ตามภาพ ![image3](image3)
+-- Stand Power GUI (Mini, Transparent, +AutoJump, +Invisible Script, +Ctrl+Click Teleport)
+-- ฟีเจอร์: AutoTP, Loop AutoTP, Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Auto Jump, Invisible Script, Ctrl+Click Teleport
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -9,7 +8,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Stand Power Frame (Mini, Transparent) ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 230)
+frame.Size = UDim2.new(0, 260, 0, 322)
 frame.Position = UDim2.new(0, 40, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0.3
@@ -167,6 +166,41 @@ autorejoinBtn.TextSize = 13
 autorejoinBtn.BackgroundColor3 = darkbtn
 autorejoinBtn.TextColor3 = Color3.new(1,1,1)
 autorejoinBtn.BorderSizePixel = 0
+
+--- 7. Auto Jump
+local autojumpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*6)
+local autojumpBtn = Instance.new("TextButton", frame)
+autojumpBtn.Size = UDim2.new(0, 110, 0, 22)
+autojumpBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*6+1)
+autojumpBtn.Text = "Auto Jump : ปิด"
+autojumpBtn.Font = Enum.Font.GothamBold
+autojumpBtn.TextSize = 13
+autojumpBtn.BackgroundColor3 = darkbtn
+autojumpBtn.TextColor3 = Color3.new(1,1,1)
+autojumpBtn.BorderSizePixel = 0
+
+--- 8. Invisible Script
+local invisibleBtn = Instance.new("TextButton", frame)
+invisibleBtn.Size = UDim2.new(0, 160, 0, 22)
+invisibleBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*7+1)
+invisibleBtn.Text = "Run Invisible Script"
+invisibleBtn.Font = Enum.Font.GothamBold
+invisibleBtn.TextSize = 13
+invisibleBtn.BackgroundColor3 = bluebtn
+invisibleBtn.TextColor3 = Color3.new(1,1,1)
+invisibleBtn.BorderSizePixel = 0
+
+--- 9. Ctrl+Click Teleport
+local ctrlclickCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*8)
+local ctrlclickBtn = Instance.new("TextButton", frame)
+ctrlclickBtn.Size = UDim2.new(0, 180, 0, 22)
+ctrlclickBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*8+1)
+ctrlclickBtn.Text = "Ctrl+Click Teleport : ปิด"
+ctrlclickBtn.Font = Enum.Font.GothamBold
+ctrlclickBtn.TextSize = 13
+ctrlclickBtn.BackgroundColor3 = darkbtn
+ctrlclickBtn.TextColor3 = Color3.new(1,1,1)
+ctrlclickBtn.BorderSizePixel = 0
 
 -------------------- LOGIC (Utility) ------------------
 
@@ -378,4 +412,56 @@ autorejoinBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--------------------- End of Script --------------------
+-- 7. Auto Jump
+local autoJumpEnabled = false
+local autoJumpLoop = nil
+autojumpBtn.MouseButton1Click:Connect(function()
+    autoJumpEnabled = not autoJumpEnabled
+    autojumpBtn.Text = "Auto Jump : " .. (autoJumpEnabled and "เปิด" or "ปิด")
+    autojumpCircle.BackgroundColor3 = autoJumpEnabled and statusColors.on or statusColors.off
+    if autoJumpEnabled and not autoJumpLoop then
+        autoJumpLoop = true
+        spawn(function()
+            while autoJumpEnabled and player.Character and player.Character:FindFirstChildOfClass("Humanoid") do
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping and hum:GetState() ~= Enum.HumanoidStateType.Freefall then
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+                wait(0.25)
+            end
+            autoJumpLoop = nil
+        end)
+    elseif not autoJumpEnabled then
+        autoJumpLoop = false
+    end
+end)
+
+-- 8. Run Invisible Script
+invisibleBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Invisible-script-20557"))()
+    end)
+end)
+
+-- 9. Ctrl+Click Teleport
+local ctrlClickEnabled = false
+ctrlclickBtn.MouseButton1Click:Connect(function()
+    ctrlClickEnabled = not ctrlClickEnabled
+    ctrlclickBtn.Text = "Ctrl+Click Teleport : " .. (ctrlClickEnabled and "เปิด" or "ปิด")
+    ctrlclickCircle.BackgroundColor3 = ctrlClickEnabled and statusColors.on or statusColors.off
+end)
+
+local mouse = player:GetMouse()
+mouse.Button1Down:Connect(function()
+    if ctrlClickEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local unitRay = workspace.CurrentCamera:ScreenPointToRay(mouse.X, mouse.Y)
+            local ray = Ray.new(unitRay.Origin, unitRay.Direction * 500)
+            local part, pos = workspace:FindPartOnRay(ray, char)
+            if pos then
+                char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
+            end
+        end
+    end
+end)
