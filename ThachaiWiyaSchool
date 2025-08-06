@@ -1,5 +1,5 @@
--- Stand Power GUI (Mini, Transparent, +AutoJump, +Invisible Script, +Ctrl+Click Teleport)
--- ฟีเจอร์: AutoTP, Loop AutoTP, Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Auto Jump, Invisible Script, Ctrl+Click Teleport
+-- Stand Power GUI (Mini, Transparent, +AutoJump, +Invisible Script, +Ctrl+Click Teleport, +AutoWalk, +Multi Loop AutoTP)
+-- ฟีเจอร์: AutoTP, Loop AutoTP (หลายจุด), Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Auto Jump, Invisible Script, Ctrl+Click Teleport, Auto Walk
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -8,7 +8,7 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Stand Power Frame (Mini, Transparent) ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 322)
+frame.Size = UDim2.new(0, 260, 0, 370)
 frame.Position = UDim2.new(0, 40, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0.3
@@ -107,10 +107,10 @@ autosetBtn.BackgroundColor3 = bluebtn
 autosetBtn.TextColor3 = Color3.new(1,1,1)
 autosetBtn.BorderSizePixel = 0
 
---- 2. Loop AutoTP
+--- 2. Loop AutoTP (Multi)
 local loopautotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
 local loopautotpBtn = Instance.new("TextButton", frame)
-loopautotpBtn.Size = UDim2.new(0, 160, 0, 22)
+loopautotpBtn.Size = UDim2.new(0, 170, 0, 22)
 loopautotpBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH+1)
 loopautotpBtn.Text = "Loop AutoTP : ปิด"
 loopautotpBtn.Font = Enum.Font.GothamBold
@@ -118,6 +118,15 @@ loopautotpBtn.TextSize = 13
 loopautotpBtn.BackgroundColor3 = darkbtn
 loopautotpBtn.TextColor3 = Color3.new(1,1,1)
 loopautotpBtn.BorderSizePixel = 0
+local addLoopTPBtn = Instance.new("TextButton", frame)
+addLoopTPBtn.Size = UDim2.new(0, 70, 0, 22)
+addLoopTPBtn.Position = UDim2.new(0, leftX+195, 0, y0+rowH+1)
+addLoopTPBtn.Text = "Add Point"
+addLoopTPBtn.Font = Enum.Font.GothamBold
+addLoopTPBtn.TextSize = 11
+addLoopTPBtn.BackgroundColor3 = bluebtn
+addLoopTPBtn.TextColor3 = Color3.new(1,1,1)
+addLoopTPBtn.BorderSizePixel = 0
 
 --- 3. Set Spawn
 local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
@@ -202,6 +211,18 @@ ctrlclickBtn.BackgroundColor3 = darkbtn
 ctrlclickBtn.TextColor3 = Color3.new(1,1,1)
 ctrlclickBtn.BorderSizePixel = 0
 
+--- 10. Auto Walk
+local autoWalkCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*9)
+local autoWalkBtn = Instance.new("TextButton", frame)
+autoWalkBtn.Size = UDim2.new(0, 120, 0, 22)
+autoWalkBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*9+1)
+autoWalkBtn.Text = "Auto Walk : ปิด"
+autoWalkBtn.Font = Enum.Font.GothamBold
+autoWalkBtn.TextSize = 13
+autoWalkBtn.BackgroundColor3 = darkbtn
+autoWalkBtn.TextColor3 = Color3.new(1,1,1)
+autoWalkBtn.BorderSizePixel = 0
+
 -------------------- LOGIC (Utility) ------------------
 
 -- 1. AutoTP (เลือด <= 9% วาปทุก 0.5 วิ)
@@ -255,42 +276,67 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 2. Loop AutoTP (กันเดินออกนอกจุด)
+-- 2. Loop AutoTP (Support Multi Points)
 local loopAutoTPEnabled = false
-local loopAutoTP_Pos = nil
+local loopAutoTP_Points = {}
+local loopAutoTP_Index = 1
 local loopAutoTP_Radius = 4
 local loopAutoTPLoop = nil
 
-loopautotpBtn.MouseButton1Click:Connect(function()
+local function updateLoopAutoTPBtnText()
+    loopautotpBtn.Text = "Loop AutoTP : " .. (loopAutoTPEnabled and "เปิด" or "ปิด") .. " ("..#loopAutoTP_Points.." จุด)"
+end
+
+addLoopTPBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        if not loopAutoTPEnabled then
-            loopAutoTP_Pos = char.HumanoidRootPart.Position
-        end
-        loopAutoTPEnabled = not loopAutoTPEnabled
-        loopautotpBtn.Text = "Loop AutoTP : " .. (loopAutoTPEnabled and "เปิด" or "ปิด")
-        loopautotpcircle.BackgroundColor3 = loopAutoTPEnabled and statusColors.on or statusColors.off
-        if loopAutoTPEnabled then
-            if not loopAutoTPLoop then
-                loopAutoTPLoop = true
-                spawn(function()
-                    while loopAutoTPEnabled and loopAutoTPLoop do
-                        local c = player.Character
-                        if c and c:FindFirstChild("HumanoidRootPart") and loopAutoTP_Pos then
-                            local dist = (c.HumanoidRootPart.Position - loopAutoTP_Pos).Magnitude
-                            if dist > loopAutoTP_Radius then
-                                c.HumanoidRootPart.CFrame = CFrame.new(loopAutoTP_Pos)
-                            end
-                        end
-                        wait(0.1)
-                    end
-                    loopAutoTPLoop = nil
-                end)
-            end
-        else
-            loopAutoTPLoop = false
+        table.insert(loopAutoTP_Points, char.HumanoidRootPart.Position)
+        updateLoopAutoTPBtnText()
+    end
+end)
+
+loopautotpBtn.MouseButton1Click:Connect(function()
+    if not loopAutoTPEnabled and #loopAutoTP_Points == 0 then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            table.insert(loopAutoTP_Points, char.HumanoidRootPart.Position)
         end
     end
+    loopAutoTPEnabled = not loopAutoTPEnabled
+    updateLoopAutoTPBtnText()
+    loopautotpcircle.BackgroundColor3 = loopAutoTPEnabled and statusColors.on or statusColors.off
+    if loopAutoTPEnabled then
+        if not loopAutoTPLoop then
+            loopAutoTPLoop = true
+            spawn(function()
+                loopAutoTP_Index = 1
+                while loopAutoTPEnabled and loopAutoTPLoop and #loopAutoTP_Points > 0 do
+                    local c = player.Character
+                    if c and c:FindFirstChild("HumanoidRootPart") and loopAutoTP_Points[loopAutoTP_Index] then
+                        local dist = (c.HumanoidRootPart.Position - loopAutoTP_Points[loopAutoTP_Index]).Magnitude
+                        if dist > loopAutoTP_Radius then
+                            c.HumanoidRootPart.CFrame = CFrame.new(loopAutoTP_Points[loopAutoTP_Index])
+                        else
+                            -- ไปจุดถัดไป เมื่ออยู่ในรัศมี
+                            loopAutoTP_Index = loopAutoTP_Index % #loopAutoTP_Points + 1
+                            wait(0.25)
+                        end
+                    end
+                    wait(0.1)
+                end
+                loopAutoTPLoop = nil
+            end)
+        end
+    else
+        loopAutoTPLoop = false
+    end
+end)
+
+-- Reset Loop AutoTP Points with RightClick on Add Point
+addLoopTPBtn.MouseButton2Click:Connect(function()
+    loopAutoTP_Points = {}
+    loopAutoTP_Index = 1
+    updateLoopAutoTPBtnText()
 end)
 
 -- 3. Set Spawn
@@ -463,6 +509,32 @@ mouse.Button1Down:Connect(function()
                 char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
             end
         end
+    end
+end)
+
+-------------------- NEW: Auto Walk ------------------
+local autoWalkEnabled = false
+local autoWalkThread = nil
+autoWalkBtn.MouseButton1Click:Connect(function()
+    autoWalkEnabled = not autoWalkEnabled
+    autoWalkBtn.Text = "Auto Walk : " .. (autoWalkEnabled and "เปิด" or "ปิด")
+    autoWalkCircle.BackgroundColor3 = autoWalkEnabled and statusColors.on or statusColors.off
+    if autoWalkEnabled and not autoWalkThread then
+        autoWalkThread = true
+        spawn(function()
+            while autoWalkEnabled do
+                local char = player.Character
+                if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    -- เดินไปข้างหน้า
+                    hum:Move(Vector3.new(0,0,-1), true)
+                end
+                wait(0.05)
+            end
+            autoWalkThread = nil
+        end)
+    elseif not autoWalkEnabled then
+        autoWalkThread = false
     end
 end)
 
