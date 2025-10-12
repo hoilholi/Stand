@@ -109,7 +109,7 @@ for _, plr in ipairs(Players:GetPlayers()) do
 end
 
 ------------------------------------------------------------------
--- GUI SETUP (ปรับให้เรียบร้อยและเรียงหน้าใหม่ ไม่หลุดกรอบ, และย้ายไปด้านซ้าย)
+-- GUI SETUP (ปรับให้เรียบร้อยและเรียงหน้าใหม่ ไม่หลุดกรอบ, และย้ายไปตรงกลางจอ)
 ------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LockOnGui"
@@ -118,8 +118,8 @@ ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 240, 0, 350)  -- เพิ่มความกว้างและความสูงเพื่อรองรับปุ่มและช่อง
-MainFrame.Position = UDim2.new(0, 10, 0.5, 0)  -- ย้ายไปด้านซ้าย (left-aligned)
-MainFrame.AnchorPoint = Vector2.new(0, 0.5)  -- Anchor ที่ด้านซ้ายกลางแนวตั้ง
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)  -- ตำแหน่งตรงกลางจอ
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)  -- Anchor ที่ตรงกลาง
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- สีดำ
 MainFrame.BackgroundTransparency = 0
 MainFrame.Active = true
@@ -173,8 +173,8 @@ UICornerMin.Parent = MinimizeButton
 
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 30, 0, 30)
-MiniButton.Position = UDim2.new(0, 10, 0.5, 0)  -- ปรับให้เริ่มต้นด้านซ้ายเช่นกัน
-MiniButton.AnchorPoint = Vector2.new(0, 0.5)
+MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)  -- ตำแหน่งตรงกลางเมื่อมินิไทซ์
+MiniButton.AnchorPoint = Vector2.new(0.5, 0.5)
 MiniButton.Text = "☰"
 MiniButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MiniButton.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -244,11 +244,11 @@ local UICornerReset = Instance.new("UICorner")
 UICornerReset.CornerRadius = UDim.new(0, 6)
 UICornerReset.Parent = ResetHitboxButton
 
--- Container สำหรับปุ่ม G I F S (กรอบสีขาวกับเส้นขอบดำ)
+-- Container สำหรับปุ่ม G I F S (กรอบสีขาวกับเส้นขอบดำ เอาสีขาวออก)
 local ButtonContainer = Instance.new("Frame")
 ButtonContainer.Size = UDim2.new(0, 200, 0, 24)
 ButtonContainer.Position = UDim2.new(0, 20, 0, 150)
-ButtonContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- สีขาว
+ButtonContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- เปลี่ยนเป็นสีดำแทนสีขาว
 ButtonContainer.Parent = MainFrame
 
 local UICornerContainer = Instance.new("UICorner")
