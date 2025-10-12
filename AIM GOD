@@ -1,0 +1,976 @@
+-- วางใน StarterPlayerScripts หรือ StarterGui
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local DataStoreService = game:GetService("DataStoreService")
+
+local player = Players.LocalPlayer
+local SettingsDataStore = DataStoreService:GetDataStore("LockOnSettings")
+
+-- CONFIG STATE
+local LOCK_DISTANCE = 40
+local minLockDistance, maxLockDistance = 10, math.huge
+local HEAD_HITBOX_SIZE = 2
+local BODY_HITBOX_SIZE = 2
+local MAX_HITBOX_SIZE = 13 -- ขนาดสูงสุดของ Hitbox
+
+-- ขนาดปกติของ Hitbox
+local DEFAULT_HEAD_SIZE = Vector3.new(2, 1, 1)
+local DEFAULT_BODY_SIZE = Vector3.new(2, 2, 1)
+
+-- ปุ่มลัดเริ่มต้น
+local toggleLockKey = Enum.KeyCode.Q
+local toggleFireKey = Enum.KeyCode.E
+local toggleHeadHitboxKey = Enum.KeyCode.H
+local toggleBodyHitboxKey = Enum.KeyCode.B
+local resetHitboxKey = Enum.KeyCode.R
+
+local HEAD_HITBOX_TOGGLE_VALUES = {2, 5, 8, 10, 13}
+local BODY_HITBOX_TOGGLE_VALUES = {2, 4, 6, 10, 13}
+local headHitboxToggleIndex = 1
+local bodyHitboxToggleIndex = 1
+
+-- ฟังก์ชันแปลง Enum.KeyCode เป็นตัวอักษร
+local function keyToString(key)
+    return (key and tostring(key):gsub("Enum.KeyCode.", "")) or ""
+end
+
+-- ฟังก์ชันแจ้งเตือน
+local function showNotification(message, color)
+    local notification = Instance.new("TextLabel")
+    notification.Size = UDim2.new(0, 200, 0, 50)
+    notification.Position = UDim2.new(0.5, -100, 0.2, 0)
+    notification.BackgroundTransparency = 0.2
+    notification.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    notification.Text = message
+    notification.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+    notification.TextScaled = true
+    notification.Font = Enum.Font.GothamBold
+    notification.Parent = player.PlayerGui:WaitForChild("LockOnGui")
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = notification
+    
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local goal = {Position = UDim2.new(0.5, -100, 0.1, 0), TextTransparency = 1, BackgroundTransparency = 1}
+    TweenService:Create(notification, tweenInfo, goal):Play()
+    task.delay(1.1, function()
+        notification:Destroy()
+    end)
+end
+
+-- โหลดการตั้งค่าจาก DataStore
+local function loadSettings()
+    local success, data = pcall(function()
+        return SettingsDataStore:GetAsync(player.UserId .. "_Settings")
+    end)
+    if success and data then
+        toggleLockKey = data.toggleLockKey or toggleLockKey
+        toggleFireKey = data.toggleFireKey or toggleFireKey
+        toggleHeadHitboxKey = data.toggleHeadHitboxKey or toggleHeadHitboxKey
+        toggleBodyHitboxKey = data.toggleBodyHitboxKey or toggleBodyHitboxKey
+        resetHitboxKey = data.resetHitboxKey or resetHitboxKey
+        HEAD_HITBOX_SIZE = data.headHitboxSize or HEAD_HITBOX_SIZE
+        BODY_HITBOX_SIZE = data.bodyHitboxSize or BODY_HITBOX_SIZE
+        headHitboxToggleIndex = data.headHitboxToggleIndex or headHitboxToggleIndex
+        bodyHitboxToggleIndex = data.bodyHitboxToggleIndex or bodyHitboxToggleIndex
+        LOCK_DISTANCE = data.lockDistance or LOCK_DISTANCE
+    else
+        showNotification("Failed to load settings", Color3.fromRGB(255, 80, 80))
+    end
+end
+
+-- บันทึกการตั้งค่าไปยัง DataStore
+local function saveSettings()
+    pcall(function()
+        SettingsDataStore:SetAsync(player.UserId .. "_Settings", {
+            toggleLockKey = toggleLockKey,
+            toggleFireKey = toggleFireKey,
+            toggleHeadHitboxKey = toggleHeadHitboxKey,
+            toggleBodyHitboxKey = toggleBodyHitboxKey,
+            resetHitboxKey = resetHitboxKey,
+            headHitboxSize = HEAD_HITBOX_SIZE,
+            bodyHitboxSize = BODY_HITBOX_SIZE,
+            headHitboxToggleIndex = headHitboxToggleIndex,
+            bodyHitboxToggleIndex = bodyHitboxToggleIndex,
+            lockDistance = LOCK_DISTANCE
+        })
+    end)
+end
+
+-- ตรวจสอบว่าเซิร์ฟเวอร์อนุญาตให้ปรับ Hitbox
+local function canModifyHitbox(char)
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
+        return hrp:IsDescendantOf(workspace) and hrp:GetNetworkOwner() == nil -- ตรวจสอบ Network Ownership
+    end
+    return false
+end
+
+------------------------------------------------------------------
+-- HITBOX SECTION
+------------------------------------------------------------------
+local function setHitboxSizes(char, head, body)
+    if not canModifyHitbox(char) then
+        showNotification("Cannot modify hitbox: Server restrictions", Color3.fromRGB(255, 80, 80))
+        return
+    end
+    head = math.clamp(head, 0.01, MAX_HITBOX_SIZE)
+    body = math.clamp(body, 0.01, MAX_HITBOX_SIZE)
+    if char:FindFirstChild("Head") then
+        local part = char.Head
+        part.Size = Vector3.new(head, head, head)
+        part.CanCollide = false
+        local mesh = part:FindFirstChildOfClass("SpecialMesh")
+        if mesh then
+            mesh.Scale = Vector3.new(1, 1, 1)
+        end
+    end
+    if char:FindFirstChild("HumanoidRootPart") then
+        local part = char.HumanoidRootPart
+        part.Size = Vector3.new(body, body, body)
+        part.CanCollide = false
+    end
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") and part.Name:find("Torso") then
+            part.Size = Vector3.new(body, body, body)
+            part.CanCollide = false
+        end
+    end
+    showNotification("Hitbox updated: Head=" .. head .. ", Body=" .. body, Color3.fromRGB(80, 200, 80))
+end
+
+local function resetHitboxSizes(char)
+    if not canModifyHitbox(char) then
+        showNotification("Cannot reset hitbox: Server restrictions", Color3.fromRGB(255, 80, 80))
+        return
+    end
+    if char:FindFirstChild("Head") then
+        local part = char.Head
+        part.Size = DEFAULT_HEAD_SIZE
+        part.CanCollide = false
+        local mesh = part:FindFirstChildOfClass("SpecialMesh")
+        if mesh then
+            mesh.Scale = Vector3.new(1.25, 1.25, 1.25)
+        end
+    end
+    if char:FindFirstChild("HumanoidRootPart") then
+        local part = char.HumanoidRootPart
+        part.Size = DEFAULT_BODY_SIZE
+        part.CanCollide = false
+    end
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") and part.Name:find("Torso") then
+            part.Size = Vector3.new(2, 2, 1)
+            part.CanCollide = false
+        end
+    end
+    showNotification("Hitbox reset to default", Color3.fromRGB(80, 200, 80))
+end
+
+local function updateAllHitboxes()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            setHitboxSizes(plr.Character, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
+        end
+    end
+end
+
+local function resetAllHitboxes()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            resetHitboxSizes(plr.Character)
+        end
+    end
+    HEAD_HITBOX_SIZE = 2
+    BODY_HITBOX_SIZE = 2
+    if headSizeBox then headSizeBox.Text = tostring(HEAD_HITBOX_SIZE) end
+    if bodySizeBox then bodySizeBox.Text = tostring(BODY_HITBOX_SIZE) end
+    headHitboxToggleIndex = 1
+    bodyHitboxToggleIndex = 1
+    saveSettings()
+    showNotification("All hitboxes reset", Color3.fromRGB(80, 200, 80))
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(0.2)
+        setHitboxSizes(char, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
+    end)
+end)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= player and plr.Character then
+        setHitboxSizes(plr.Character, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
+    end
+end
+
+------------------------------------------------------------------
+-- GUI SETUP
+------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LockOnGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 300)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BackgroundTransparency = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(150, 150, 150)
+UIStroke.Thickness = 2
+UIStroke.Transparency = 0.3
+UIStroke.Parent = MainFrame
+
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 70, 70))
+}
+UIGradient.Rotation = 45
+UIGradient.Parent = MainFrame
+
+local UIScale = Instance.new("UIScale")
+UIScale.Scale = 1
+UIScale.Parent = MainFrame
+
+MainFrame.MouseEnter:Connect(function()
+    TweenService:Create(UIScale, TweenInfo.new(0.2), {Scale = 1.02}):Play()
+end)
+MainFrame.MouseLeave:Connect(function()
+    TweenService:Create(UIScale, TweenInfo.new(0.2), {Scale = 1}):Play()
+end)
+
+local DragBar = Instance.new("Frame")
+DragBar.Size = UDim2.new(1, 0, 0, 28)
+DragBar.Position = UDim2.new(0, 0, 0, 0)
+DragBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+DragBar.Active = true
+DragBar.Parent = MainFrame
+
+local UICornerDrag = Instance.new("UICorner")
+UICornerDrag.CornerRadius = UDim.new(0, 10)
+UICornerDrag.Parent = DragBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -60, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "LockOn Settings"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 16
+Title.TextScaled = true
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = DragBar
+
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 24, 0, 24)
+MinimizeButton.Position = UDim2.new(1, -32, 0.5, -12)
+MinimizeButton.Text = "-"
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextSize = 20
+MinimizeButton.TextScaled = true
+MinimizeButton.Parent = DragBar
+
+local UICornerMin = Instance.new("UICorner")
+UICornerMin.CornerRadius = UDim.new(0, 6)
+UICornerMin.Parent = MinimizeButton
+
+local MiniButton = Instance.new("TextButton")
+MiniButton.Size = UDim2.new(0, 40, 0, 40)
+MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+MiniButton.AnchorPoint = Vector2.new(0.5, 0.5)
+MiniButton.Text = "☰"
+MiniButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+MiniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MiniButton.Font = Enum.Font.GothamBold
+MiniButton.TextSize = 30
+MiniButton.TextScaled = true
+MiniButton.Visible = false
+MiniButton.Parent = ScreenGui
+
+local UICornerMini = Instance.new("UICorner")
+UICornerMini.CornerRadius = UDim.new(0, 8)
+UICornerMini.Parent = MiniButton
+
+local ToggleAutoLock = Instance.new("TextButton")
+ToggleAutoLock.Size = UDim2.new(0, 220, 0, 32)
+ToggleAutoLock.Position = UDim2.new(0, 20, 0, 36)
+ToggleAutoLock.Text = "Auto-Lock: OFF"
+ToggleAutoLock.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+ToggleAutoLock.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleAutoLock.Font = Enum.Font.GothamSemibold
+ToggleAutoLock.TextSize = 16
+ToggleAutoLock.TextScaled = true
+ToggleAutoLock.Parent = MainFrame
+
+local UICornerLock = Instance.new("UICorner")
+UICornerLock.CornerRadius = UDim.new(0, 6)
+UICornerLock.Parent = ToggleAutoLock
+
+local ToggleAutoFire = Instance.new("TextButton")
+ToggleAutoFire.Size = UDim2.new(0, 220, 0, 32)
+ToggleAutoFire.Position = UDim2.new(0, 20, 0, 72)
+ToggleAutoFire.Text = "Auto-Fire: OFF"
+ToggleAutoFire.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+ToggleAutoFire.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleAutoFire.Font = Enum.Font.GothamSemibold
+ToggleAutoFire.TextSize = 16
+ToggleAutoFire.TextScaled = true
+ToggleAutoFire.Parent = MainFrame
+
+local UICornerFire = Instance.new("UICorner")
+UICornerFire.CornerRadius = UDim.new(0, 6)
+UICornerFire.Parent = ToggleAutoFire
+
+local ToggleTeamCheck = Instance.new("TextButton")
+ToggleTeamCheck.Size = UDim2.new(0, 220, 0, 32)
+ToggleTeamCheck.Position = UDim2.new(0, 20, 0, 108)
+ToggleTeamCheck.Text = "Team Check: ON"
+ToggleTeamCheck.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+ToggleTeamCheck.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleTeamCheck.Font = Enum.Font.GothamSemibold
+ToggleTeamCheck.TextSize = 16
+ToggleAutoFire.TextScaled = true
+ToggleTeamCheck.Parent = MainFrame
+
+local UICornerTeam = Instance.new("UICorner")
+UICornerTeam.CornerRadius = UDim.new(0, 6)
+UICornerTeam.Parent = ToggleTeamCheck
+
+local ResetHitboxButton = Instance.new("TextButton")
+ResetHitboxButton.Size = UDim2.new(0, 220, 0, 32)
+ResetHitboxButton.Position = UDim2.new(0, 20, 0, 144)
+ResetHitboxButton.Text = "Reset Hitboxes"
+ResetHitboxButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+ResetHitboxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetHitboxButton.Font = Enum.Font.GothamSemibold
+ResetHitboxButton.TextSize = 16
+ResetHitboxButton.TextScaled = true
+ResetHitboxButton.Parent = MainFrame
+
+local UICornerReset = Instance.new("UICorner")
+UICornerReset.CornerRadius = UDim.new(0, 6)
+UICornerReset.Parent = ResetHitboxButton
+
+local distanceLabel = Instance.new("TextLabel")
+distanceLabel.Size = UDim2.new(0, 100, 0, 24)
+distanceLabel.Position = UDim2.new(0, 20, 0, 180)
+distanceLabel.BackgroundTransparency = 1
+distanceLabel.Text = "Lock Distance:"
+distanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+distanceLabel.Font = Enum.Font.GothamSemibold
+distanceLabel.TextSize = 14
+distanceLabel.TextScaled = true
+distanceLabel.TextXAlignment = Enum.TextXAlignment.Left
+distanceLabel.Parent = MainFrame
+
+local distanceBox = Instance.new("TextBox")
+distanceBox.Size = UDim2.new(0, 100, 0, 24)
+distanceBox.Position = UDim2.new(0, 140, 0, 180)
+distanceBox.Text = tostring(LOCK_DISTANCE)
+distanceBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+distanceBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+distanceBox.Font = Enum.Font.Gotham
+distanceBox.TextSize = 14
+distanceBox.TextScaled = true
+distanceBox.ClearTextOnFocus = false
+distanceBox.Parent = MainFrame
+
+local UICornerDist = Instance.new("UICorner")
+UICornerDist.CornerRadius = UDim.new(0, 6)
+UICornerDist.Parent = distanceBox
+
+local headSizeLabel = Instance.new("TextLabel")
+headSizeLabel.Size = UDim2.new(0, 100, 0, 24)
+headSizeLabel.Position = UDim2.new(0, 20, 0, 208)
+headSizeLabel.BackgroundTransparency = 1
+headSizeLabel.Text = "Head Hitbox:"
+headSizeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+headSizeLabel.Font = Enum.Font.GothamSemibold
+headSizeLabel.TextSize = 14
+headSizeLabel.TextScaled = true
+headSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+headSizeLabel.Parent = MainFrame
+
+local headSizeBox = Instance.new("TextBox")
+headSizeBox.Size = UDim2.new(0, 100, 0, 24)
+headSizeBox.Position = UDim2.new(0, 140, 0, 208)
+headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+headSizeBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+headSizeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+headSizeBox.Font = Enum.Font.Gotham
+headSizeBox.TextSize = 14
+headSizeBox.TextScaled = true
+headSizeBox.ClearTextOnFocus = false
+headSizeBox.Parent = MainFrame
+
+local UICornerHead = Instance.new("UICorner")
+UICornerHead.CornerRadius = UDim.new(0, 6)
+UICornerHead.Parent = headSizeBox
+
+local bodySizeLabel = Instance.new("TextLabel")
+bodySizeLabel.Size = UDim2.new(0, 100, 0, 24)
+bodySizeLabel.Position = UDim2.new(0, 20, 0, 236)
+bodySizeLabel.BackgroundTransparency = 1
+bodySizeLabel.Text = "Body Hitbox:"
+bodySizeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+bodySizeLabel.Font = Enum.Font.GothamSemibold
+bodySizeLabel.TextSize = 14
+bodySizeLabel.TextScaled = true
+bodySizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+bodySizeLabel.Parent = MainFrame
+
+local bodySizeBox = Instance.new("TextBox")
+bodySizeBox.Size = UDim2.new(0, 100, 0, 24)
+bodySizeBox.Position = UDim2.new(0, 140, 0, 236)
+bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+bodySizeBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+bodySizeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+bodySizeBox.Font = Enum.Font.Gotham
+bodySizeBox.TextSize = 14
+bodySizeBox.TextScaled = true
+bodySizeBox.ClearTextOnFocus = false
+bodySizeBox.Parent = MainFrame
+
+local UICornerBody = Instance.new("UICorner")
+UICornerBody.CornerRadius = UDim.new(0, 6)
+UICornerBody.Parent = bodySizeBox
+
+local keySectionLabel = Instance.new("TextLabel")
+keySectionLabel.Size = UDim2.new(1, -40, 0, 20)
+keySectionLabel.Position = UDim2.new(0, 20, 0, 264)
+keySectionLabel.BackgroundTransparency = 1
+keySectionLabel.Text = "Hotkeys:"
+keySectionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+keySectionLabel.Font = Enum.Font.GothamBold
+keySectionLabel.TextSize = 14
+keySectionLabel.TextScaled = true
+keySectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+keySectionLabel.Parent = MainFrame
+
+local headHotkeyLabel = Instance.new("TextLabel")
+headHotkeyLabel.Size = UDim2.new(0, 80, 0, 18)
+headHotkeyLabel.Position = UDim2.new(0, 20, 0, 288)
+headHotkeyLabel.BackgroundTransparency = 1
+headHotkeyLabel.Text = "Head Hotkey:"
+headHotkeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+headHotkeyLabel.Font = Enum.Font.Gotham
+headHotkeyLabel.TextSize = 12
+headHotkeyLabel.TextScaled = true
+headHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+headHotkeyLabel.Parent = MainFrame
+
+local headHotkeyBox = Instance.new("TextBox")
+headHotkeyBox.Size = UDim2.new(0, 40, 0, 18)
+headHotkeyBox.Position = UDim2.new(0, 100, 0, 288)
+headHotkeyBox.Text = keyToString(toggleHeadHitboxKey)
+headHotkeyBox.ClearTextOnFocus = false
+headHotkeyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+headHotkeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+headHotkeyBox.Font = Enum.Font.Gotham
+headHotkeyBox.TextSize = 12
+headHotkeyBox.TextScaled = true
+headHotkeyBox.Parent = MainFrame
+
+local UICornerHeadHot = Instance.new("UICorner")
+UICornerHeadHot.CornerRadius = UDim.new(0, 6)
+UICornerHeadHot.Parent = headHotkeyBox
+
+local bodyHotkeyLabel = Instance.new("TextLabel")
+bodyHotkeyLabel.Size = UDim2.new(0, 80, 0, 18)
+bodyHotkeyLabel.Position = UDim2.new(0, 150, 0, 288)
+bodyHotkeyLabel.BackgroundTransparency = 1
+bodyHotkeyLabel.Text = "Body Hotkey:"
+bodyHotkeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+bodyHotkeyLabel.Font = Enum.Font.Gotham
+bodyHotkeyLabel.TextSize = 12
+bodyHotkeyLabel.TextScaled = true
+bodyHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+bodyHotkeyLabel.Parent = MainFrame
+
+local bodyHotkeyBox = Instance.new("TextBox")
+bodyHotkeyBox.Size = UDim2.new(0, 40, 0, 18)
+bodyHotkeyBox.Position = UDim2.new(0, 230, 0, 288)
+bodyHotkeyBox.AnchorPoint = Vector2.new(1, 0)
+bodyHotkeyBox.Text = keyToString(toggleBodyHitboxKey)
+bodyHotkeyBox.ClearTextOnFocus = false
+bodyHotkeyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+bodyHotkeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+bodyHotkeyBox.Font = Enum.Font.Gotham
+bodyHotkeyBox.TextSize = 12
+bodyHotkeyBox.TextScaled = true
+bodyHotkeyBox.Parent = MainFrame
+
+local UICornerBodyHot = Instance.new("UICorner")
+UICornerBodyHot.CornerRadius = UDim.new(0, 6)
+UICornerBodyHot.Parent = bodyHotkeyBox
+
+local keyLockLabel = Instance.new("TextLabel")
+keyLockLabel.Size = UDim2.new(0, 80, 0, 18)
+keyLockLabel.Position = UDim2.new(0, 20, 0, 310)
+keyLockLabel.BackgroundTransparency = 1
+keyLockLabel.Text = "Auto-Lock Key:"
+keyLockLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyLockLabel.Font = Enum.Font.Gotham
+keyLockLabel.TextSize = 12
+keyLockLabel.TextScaled = true
+keyLockLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyLockLabel.Parent = MainFrame
+
+local keyLockBox = Instance.new("TextBox")
+keyLockBox.Size = UDim2.new(0, 40, 0, 18)
+keyLockBox.Position = UDim2.new(0, 100, 0, 310)
+keyLockBox.Text = keyToString(toggleLockKey)
+keyLockBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+keyLockBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyLockBox.Font = Enum.Font.Gotham
+keyLockBox.TextSize = 12
+keyLockBox.TextScaled = true
+keyLockBox.ClearTextOnFocus = false
+keyLockBox.Parent = MainFrame
+
+local UICornerLockKey = Instance.new("UICorner")
+UICornerLockKey.CornerRadius = UDim.new(0, 6)
+UICornerLockKey.Parent = keyLockBox
+
+local keyFireLabel = Instance.new("TextLabel")
+keyFireLabel.Size = UDim2.new(0, 80, 0, 18)
+keyFireLabel.Position = UDim2.new(0, 150, 0, 310)
+keyFireLabel.BackgroundTransparency = 1
+keyFireLabel.Text = "Auto-Fire Key:"
+keyFireLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyFireLabel.Font = Enum.Font.Gotham
+keyFireLabel.TextSize = 12
+keyFireLabel.TextScaled = true
+keyFireLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyFireLabel.Parent = MainFrame
+
+local keyFireBox = Instance.new("TextBox")
+keyFireBox.Size = UDim2.new(0, 40, 0, 18)
+keyFireBox.Position = UDim2.new(0, 230, 0, 310)
+keyFireBox.AnchorPoint = Vector2.new(1, 0)
+keyFireBox.Text = keyToString(toggleFireKey)
+keyFireBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+keyFireBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyFireBox.Font = Enum.Font.Gotham
+keyFireBox.TextSize = 12
+keyFireBox.TextScaled = true
+keyFireBox.ClearTextOnFocus = false
+keyFireBox.Parent = MainFrame
+
+local UICornerFireKey = Instance.new("UICorner")
+UICornerFireKey.CornerRadius = UDim.new(0, 6)
+UICornerFireKey.Parent = keyFireBox
+
+local resetHotkeyLabel = Instance.new("TextLabel")
+resetHotkeyLabel.Size = UDim2.new(0, 80, 0, 18)
+resetHotkeyLabel.Position = UDim2.new(0, 20, 0, 332)
+resetHotkeyLabel.BackgroundTransparency = 1
+resetHotkeyLabel.Text = "Reset Hotkey:"
+resetHotkeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetHotkeyLabel.Font = Enum.Font.Gotham
+resetHotkeyLabel.TextSize = 12
+resetHotkeyLabel.TextScaled = true
+resetHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+resetHotkeyLabel.Parent = MainFrame
+
+local resetHotkeyBox = Instance.new("TextBox")
+resetHotkeyBox.Size = UDim2.new(0, 40, 0, 18)
+resetHotkeyBox.Position = UDim2.new(0, 100, 0, 332)
+resetHotkeyBox.Text = keyToString(resetHitboxKey)
+resetHotkeyBox.ClearTextOnFocus = false
+resetHotkeyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+resetHotkeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetHotkeyBox.Font = Enum.Font.Gotham
+resetHotkeyBox.TextSize = 12
+resetHotkeyBox.TextScaled = true
+resetHotkeyBox.Parent = MainFrame
+
+local UICornerResetKey = Instance.new("UICorner")
+UICornerResetKey.CornerRadius = UDim.new(0, 6)
+UICornerResetKey.Parent = resetHotkeyBox
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, -40, 0, 24)
+label.Position = UDim2.new(0, 20, 0, 356)
+label.Text = ""
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.BackgroundTransparency = 1
+label.TextStrokeTransparency = 0.6
+label.Font = Enum.Font.Gotham
+label.TextSize = 16
+label.TextScaled = true
+label.TextXAlignment = Enum.TextXAlignment.Left
+label.Parent = MainFrame
+
+-- โหลดการตั้งค่าเมื่อเริ่ม
+loadSettings()
+headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+keyLockBox.Text = keyToString(toggleLockKey)
+keyFireBox.Text = keyToString(toggleFireKey)
+headHotkeyBox.Text = keyToString(toggleHeadHitboxKey)
+bodyHotkeyBox.Text = keyToString(toggleBodyHitboxKey)
+resetHotkeyBox.Text = tostring(resetHitboxKey)
+
+------------------------------------------------------------------
+-- LOGIC SECTION
+------------------------------------------------------------------
+local autoLockEnabled = false
+local autoFireEnabled = false
+local teamCheckEnabled = true
+local target = nil
+local FIRE_COOLDOWN = 0.15
+
+local lastTargetHumanoid = nil
+local lastTarget = nil
+
+local function showKillPopup()
+    local popup = Instance.new("TextLabel")
+    popup.Size = UDim2.new(0, 150, 0, 50)
+    popup.Position = UDim2.new(0.5, -75, 0.4, 0)
+    popup.BackgroundTransparency = 1
+    popup.Text = "KILL +1"
+    popup.TextColor3 = Color3.fromRGB(255, 80, 80)
+    popup.TextStrokeTransparency = 0.3
+    popup.Font = Enum.Font.GothamBlack
+    popup.TextSize = 40
+    popup.TextScaled = true
+    popup.Parent = ScreenGui
+
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local goal = {Position = UDim2.new(0.5, -75, 0.3, 0), TextTransparency = 1, TextStrokeTransparency = 1}
+    TweenService:Create(popup, tweenInfo, goal):Play()
+    task.delay(1.1, function()
+        popup:Destroy()
+    end)
+end
+
+local function getFrontFacingTarget()
+    local cam = workspace.CurrentCamera
+    if not cam then return nil end
+    local camPos = cam.CFrame.Position
+    local camLook = cam.CFrame.LookVector
+    local best, bestDot, minDist = nil, -1, math.huge
+    for _, other in ipairs(Players:GetPlayers()) do
+        if other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+            if not teamCheckEnabled or (not other.Team or not player.Team or other.Team ~= player.Team) then
+                local humanoid = other.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    local hrp = other.Character.HumanoidRootPart
+                    local toTarget = (hrp.Position - camPos)
+                    local dist = toTarget.Magnitude
+                    local dot = camLook:Dot(toTarget.Unit)
+                    if dist <= LOCK_DISTANCE and dot > bestDot then
+                        bestDot = dot
+                        best = other
+                        minDist = dist
+                    elseif dist <= LOCK_DISTANCE and dot == bestDot and dist < minDist then
+                        best = other
+                        minDist = dist
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+local function moveCameraInFrontOfTarget(target)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local hrp = target.Character.HumanoidRootPart
+    local forward = hrp.CFrame.LookVector
+    local camOffset = forward * 4
+    local camPos = hrp.Position + camOffset + Vector3.new(0, 2, 0)
+    local lookAt = hrp.Position + Vector3.new(0, 2, 0)
+    cam.CFrame = CFrame.new(camPos, lookAt)
+end
+
+local function fire()
+    local shootRemote = ReplicatedStorage:FindFirstChild("Shoot")
+    if shootRemote and shootRemote:IsA("RemoteEvent") then
+        shootRemote:FireServer()
+    else
+        local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            tool:Activate()
+        end
+    end
+end
+
+ToggleAutoLock.MouseButton1Click:Connect(function()
+    autoLockEnabled = not autoLockEnabled
+    ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
+    ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 60, 60)
+end)
+
+ToggleAutoFire.MouseButton1Click:Connect(function()
+    autoFireEnabled = not autoFireEnabled
+    ToggleAutoFire.Text = "Auto-Fire: " .. (autoFireEnabled and "ON" or "OFF")
+    ToggleAutoFire.BackgroundColor3 = autoFireEnabled and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 60, 60)
+end)
+
+ToggleTeamCheck.MouseButton1Click:Connect(function()
+    teamCheckEnabled = not teamCheckEnabled
+    ToggleTeamCheck.Text = "Team Check: " .. (teamCheckEnabled and "ON" or "OFF")
+    ToggleTeamCheck.BackgroundColor3 = teamCheckEnabled and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 60, 60)
+end)
+
+ResetHitboxButton.MouseButton1Click:Connect(function()
+    resetAllHitboxes()
+end)
+
+local lastFire = 0
+local function tryAutoFire()
+    if autoFireEnabled and target then
+        local now = tick()
+        if now - lastFire > FIRE_COOLDOWN then
+            fire()
+            lastFire = now
+        end
+    end
+end
+
+if UserInputService.TouchEnabled then
+    UserInputService.TouchStarted:Connect(function(input, processed)
+        if not processed then
+            tryAutoFire()
+        end
+    end)
+else
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        if input.KeyCode == toggleLockKey then
+            ToggleAutoLock:MouseButton1Click()
+        elseif input.KeyCode == toggleFireKey then
+            ToggleAutoFire:MouseButton1Click()
+        elseif input.KeyCode == toggleHeadHitboxKey then
+            headHitboxToggleIndex = headHitboxToggleIndex + 1
+            if headHitboxToggleIndex > #HEAD_HITBOX_TOGGLE_VALUES then headHitboxToggleIndex = 1 end
+            HEAD_HITBOX_SIZE = HEAD_HITBOX_TOGGLE_VALUES[headHitboxToggleIndex]
+            headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+            updateAllHitboxes()
+            saveSettings()
+        elseif input.KeyCode == toggleBodyHitboxKey then
+            bodyHitboxToggleIndex = bodyHitboxToggleIndex + 1
+            if bodyHitboxToggleIndex > #BODY_HITBOX_TOGGLE_VALUES then bodyHitboxToggleIndex = 1 end
+            BODY_HITBOX_SIZE = BODY_HITBOX_TOGGLE_VALUES[bodyHitboxToggleIndex]
+            bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+            updateAllHitboxes()
+            saveSettings()
+        elseif input.KeyCode == resetHitboxKey then
+            resetAllHitboxes()
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+            tryAutoFire()
+        end
+    end)
+end
+
+distanceBox.FocusLost:Connect(function()
+    local val = tonumber(distanceBox.Text)
+    if val then
+        LOCK_DISTANCE = math.max(val, minLockDistance)
+        distanceBox.Text = tostring(LOCK_DISTANCE)
+        saveSettings()
+    else
+        distanceBox.Text = tostring(LOCK_DISTANCE)
+    end
+end)
+headSizeBox.FocusLost:Connect(function()
+    local val = tonumber(headSizeBox.Text)
+    if val then
+        HEAD_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+        headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+        updateAllHitboxes()
+        saveSettings()
+    else
+        headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+    end
+end)
+bodySizeBox.FocusLost:Connect(function()
+    local val = tonumber(bodySizeBox.Text)
+    if val then
+        BODY_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+        bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+        updateAllHitboxes()
+        saveSettings()
+    else
+        bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+    end
+end)
+
+local waitingLockKey, waitingFireKey = false, false
+local waitingHeadHotkey, waitingBodyHotkey = false, false
+local waitingResetHotkey = false
+
+keyLockBox.Focused:Connect(function()
+    keyLockBox.Text = "..."
+    waitingLockKey = true
+end)
+keyFireBox.Focused:Connect(function()
+    keyFireBox.Text = "..."
+    waitingFireKey = true
+end)
+headHotkeyBox.Focused:Connect(function()
+    headHotkeyBox.Text = "..."
+    waitingHeadHotkey = true
+end)
+bodyHotkeyBox.Focused:Connect(function()
+    bodyHotkeyBox.Text = "..."
+    waitingBodyHotkey = true
+end)
+resetHotkeyBox.Focused:Connect(function()
+    resetHotkeyBox.Text = "..."
+    waitingResetHotkey = true
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed then
+        if waitingLockKey and input.KeyCode ~= Enum.KeyCode.Unknown then
+            toggleLockKey = input.KeyCode
+            keyLockBox.Text = keyToString(toggleLockKey)
+            waitingLockKey = false
+            keyLockBox:ReleaseFocus()
+            saveSettings()
+        elseif waitingFireKey and input.KeyCode ~= Enum.KeyCode.Unknown then
+            toggleFireKey = input.KeyCode
+            keyFireBox.Text = keyToString(toggleFireKey)
+            waitingFireKey = false
+            keyFireBox:ReleaseFocus()
+            saveSettings()
+        elseif waitingHeadHotkey and input.KeyCode ~= Enum.KeyCode.Unknown then
+            toggleHeadHitboxKey = input.KeyCode
+            headHotkeyBox.Text = keyToString(toggleHeadHitboxKey)
+            waitingHeadHotkey = false
+            headHotkeyBox:ReleaseFocus()
+            saveSettings()
+        elseif waitingBodyHotkey and input.KeyCode ~= Enum.KeyCode.Unknown then
+            toggleBodyHitboxKey = input.KeyCode
+            bodyHotkeyBox.Text = keyToString(toggleBodyHitboxKey)
+            waitingBodyHotkey = false
+            bodyHotkeyBox:ReleaseFocus()
+            saveSettings()
+        elseif waitingResetHotkey and input.KeyCode ~= Enum.KeyCode.Unknown then
+            resetHitboxKey = input.KeyCode
+            resetHotkeyBox.Text = keyToString(resetHitboxKey)
+            waitingResetHotkey = false
+            resetHotkeyBox:ReleaseFocus()
+            saveSettings()
+        end
+    end
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MiniButton.Visible = true
+    MiniButton.Position = MainFrame.Position
+end)
+MiniButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MiniButton.Visible = false
+end)
+
+do
+    local dragging, dragInput, dragStart, startPos
+    local function update(input)
+        if dragging then
+            local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+            local frameSize = MainFrame.AbsoluteSize
+            local delta = input.Position - dragStart
+            local newX = math.clamp(startPos.X + delta.X, 0, math.max(0, viewport.X - frameSize.X))
+            local newY = math.clamp(startPos.Y + delta.Y, 0, math.max(0, viewport.Y - frameSize.Y))
+            MainFrame.Position = UDim2.new(0, newX, 0, newY)
+            if MiniButton.Visible then
+                MiniButton.Position = MainFrame.Position
+            end
+        end
+    end
+    DragBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.AbsolutePosition
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    DragBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+-- อัปเดต hitbox ทุกๆ 0.5 วินาที
+task.spawn(function()
+    while true do
+        updateAllHitboxes()
+        task.wait(0.5)
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if autoLockEnabled then
+        local newTarget = getFrontFacingTarget()
+        if newTarget ~= target then
+            target = newTarget
+        end
+        if target then
+            moveCameraInFrontOfTarget(target)
+            label.Text = "Locking: " .. target.Name
+
+            local humanoid = target.Character and target.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if lastTarget ~= target then
+                    lastTarget = target
+                    lastTargetHumanoid = humanoid
+                end
+                if lastTargetHumanoid and lastTargetHumanoid.Health == 0 then
+                    showKillPopup()
+                    lastTargetHumanoid = nil
+                    lastTarget = nil
+                end
+            end
+        else
+            label.Text = "Locking: -"
+            lastTarget = nil
+            lastTargetHumanoid = nil
+        end
+    else
+        target = nil
+        label.Text = "Locking: -"
+        lastTarget = nil
+        lastTargetHumanoid = nil
+    end
+    if autoFireEnabled then
+        tryAutoFire()
+    end
+end)
