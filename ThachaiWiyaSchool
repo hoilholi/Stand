@@ -1,5 +1,6 @@
--- Stand Power GUI (Mini, Transparent, +AutoJump, +Invisible Script, +Ctrl+Click Teleport, +AutoWalk, +Multi Loop AutoTP)
--- ฟีเจอร์: AutoTP, Loop AutoTP (หลายจุด), Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Auto Jump, Invisible Script, Ctrl+Click Teleport, Auto Walk
+-- Stand Power GUI (Mini, Transparent, +Foldable GUI, Stair-Step Layout)
+-- ฟีเจอร์: AutoTP, Loop AutoTP (หลายจุด), Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Ctrl+Click Teleport
+-- จัดเรียง GUI เป็นแนวขั้นบันไดอย่างสวยงาม ไม่เลยกรอบ, สลับตำแหน่ง AutoTP กับ Loop AutoTP, จัดปุ่มสีฟ้าให้ตรงกันแนวตรง
 
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -8,11 +9,13 @@ gui.ResetOnSpawn = false
 
 --------------------- Main Stand Power Frame (Mini, Transparent) ---------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 370)
+frame.Size = UDim2.new(0, 280, 0, 320)  -- ปรับขนาดให้พอดีกับขั้นบันได ไม่ยาวเกิน
 frame.Position = UDim2.new(0, 40, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
 frame.BackgroundTransparency = 0.3
 frame.BorderSizePixel = 0
+local frameCorner = Instance.new("UICorner", frame)
+frameCorner.CornerRadius = UDim.new(0, 8)  -- ขอบมนสำหรับเฟรมหลัก
 
 -- Header: STAND POWER (จัดสองบรรทัด)
 local standLabel = Instance.new("TextLabel", frame)
@@ -38,6 +41,34 @@ powerLabel.TextStrokeTransparency = 0.7
 powerLabel.TextStrokeColor3 = Color3.fromRGB(60, 0, 90)
 powerLabel.Text = "POWER"
 powerLabel.TextYAlignment = Enum.TextYAlignment.Top
+
+-- ปุ่มพับ/กาง GUI (Minimize Button)
+local minimizeBtn = Instance.new("TextButton", frame)
+minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+minimizeBtn.Position = UDim2.new(1, -25, 0, 3)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(47, 52, 65)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Text = "-"
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 14
+minimizeBtn.BorderSizePixel = 0
+local minimizeCorner = Instance.new("UICorner", minimizeBtn)
+minimizeCorner.CornerRadius = UDim.new(0, 4)
+
+local fullSize = UDim2.new(0, 280, 0, 320)
+local collapsedSize = UDim2.new(0, 280, 0, 26)
+local collapsed = false
+minimizeBtn.MouseButton1Click:Connect(function()
+    collapsed = not collapsed
+    minimizeBtn.Text = collapsed and "+" or "-"
+    frame.Size = collapsed and collapsedSize or fullSize
+    -- ซ่อน/แสดงเนื้อหาด้านล่าง header
+    for _, child in ipairs(frame:GetChildren()) do
+        if child.Position.Y.Offset >= 50 and child ~= standLabel and child ~= powerLabel and child ~= minimizeBtn then
+            child.Visible = not collapsed
+        end
+    end
+end)
 
 -- Drag GUI
 local UserInputService = game:GetService("UserInputService")
@@ -66,17 +97,19 @@ end
 makeDraggable(frame, 26)
 
 local y0 = 50
-local rowH = 26
+local rowH = 28  -- เพิ่มระยะห่างเพื่อความสวยงาม
 local leftX = 8
-local function makeStatusCircle(parent, color, y)
+local stepOffset = 10  -- Offset สำหรับขั้นบันได (เลื่อนขวาเพิ่มทีละ 10 ต่อแถว)
+local blueBtnX = leftX + 195  -- ตำแหน่ง X คงที่สำหรับปุ่มสีฟ้าเพื่อให้ตรงกันแนวตรง
+local function makeStatusCircle(parent, color, x, y)
     local cir = Instance.new("Frame", parent)
     cir.Size = UDim2.new(0, 12, 0, 12)
-    cir.Position = UDim2.new(0, leftX, 0, y+7)
+    cir.Position = UDim2.new(0, leftX + x, 0, y + 8)
     cir.BackgroundColor3 = color
     cir.BorderSizePixel = 0
     cir.Name = "StatusCircle"
     local uicorner = Instance.new("UICorner", cir)
-    uicorner.CornerRadius = UDim.new(1,0)
+    uicorner.CornerRadius = UDim.new(1, 0)
     return cir
 end
 local statusColors = {
@@ -86,146 +119,153 @@ local statusColors = {
 local darkbtn = Color3.fromRGB(47,52,65)
 local bluebtn = Color3.fromRGB(66,117,143)
 
---- 1. AutoTP
-local autotpcircle = makeStatusCircle(frame, statusColors.off, y0)
-local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 110, 0, 22)
-autotpswitch.Position = UDim2.new(0, leftX+18, 0, y0+1)
-autotpswitch.Text = "AutoTP : ปิด"
-autotpswitch.Font = Enum.Font.GothamBold
-autotpswitch.TextSize = 13
-autotpswitch.BackgroundColor3 = darkbtn
-autotpswitch.TextColor3 = Color3.new(1,1,1)
-autotpswitch.BorderSizePixel = 0
-local autosetBtn = Instance.new("TextButton", frame)
-autosetBtn.Size = UDim2.new(0, 70, 0, 22)
-autosetBtn.Position = UDim2.new(0, leftX+130, 0, y0+1)
-autosetBtn.Text = "Set AutoTP"
-autosetBtn.Font = Enum.Font.GothamBold
-autosetBtn.TextSize = 12
-autosetBtn.BackgroundColor3 = bluebtn
-autosetBtn.TextColor3 = Color3.new(1,1,1)
-autosetBtn.BorderSizePixel = 0
+local function addButtonCorner(btn)
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 6)  -- ขอบมนสำหรับปุ่ม
+end
 
---- 2. Loop AutoTP (Multi)
-local loopautotpcircle = makeStatusCircle(frame, statusColors.off, y0+rowH)
+--- 1. Loop AutoTP (Multi) (ขั้นบันไดระดับ 0 - สลับตำแหน่ง)
+local loopautotpcircle = makeStatusCircle(frame, statusColors.off, 0 * stepOffset, y0)
 local loopautotpBtn = Instance.new("TextButton", frame)
 loopautotpBtn.Size = UDim2.new(0, 170, 0, 22)
-loopautotpBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH+1)
+loopautotpBtn.Position = UDim2.new(0, leftX + 18 + 0 * stepOffset, 0, y0 + 1)
 loopautotpBtn.Text = "Loop AutoTP : ปิด"
 loopautotpBtn.Font = Enum.Font.GothamBold
 loopautotpBtn.TextSize = 13
 loopautotpBtn.BackgroundColor3 = darkbtn
 loopautotpBtn.TextColor3 = Color3.new(1,1,1)
 loopautotpBtn.BorderSizePixel = 0
+addButtonCorner(loopautotpBtn)
 local addLoopTPBtn = Instance.new("TextButton", frame)
 addLoopTPBtn.Size = UDim2.new(0, 70, 0, 22)
-addLoopTPBtn.Position = UDim2.new(0, leftX+195, 0, y0+rowH+1)
+addLoopTPBtn.Position = UDim2.new(0, blueBtnX, 0, y0 + 1)
 addLoopTPBtn.Text = "Add Point"
 addLoopTPBtn.Font = Enum.Font.GothamBold
 addLoopTPBtn.TextSize = 11
 addLoopTPBtn.BackgroundColor3 = bluebtn
 addLoopTPBtn.TextColor3 = Color3.new(1,1,1)
 addLoopTPBtn.BorderSizePixel = 0
+addButtonCorner(addLoopTPBtn)
 
---- 3. Set Spawn
-local spawnCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*2)
+--- 2. AutoTP (ขั้นบันไดระดับ 1 - สลับตำแหน่ง)
+local autotpcircle = makeStatusCircle(frame, statusColors.off, 1 * stepOffset, y0 + rowH)
+local autotpswitch = Instance.new("TextButton", frame)
+autotpswitch.Size = UDim2.new(0, 110, 0, 22)
+autotpswitch.Position = UDim2.new(0, leftX + 18 + 1 * stepOffset, 0, y0 + rowH + 1)
+autotpswitch.Text = "AutoTP : ปิด"
+autotpswitch.Font = Enum.Font.GothamBold
+autotpswitch.TextSize = 13
+autotpswitch.BackgroundColor3 = darkbtn
+autotpswitch.TextColor3 = Color3.new(1,1,1)
+autotpswitch.BorderSizePixel = 0
+addButtonCorner(autotpswitch)
+local autosetBtn = Instance.new("TextButton", frame)
+autosetBtn.Size = UDim2.new(0, 70, 0, 22)
+autosetBtn.Position = UDim2.new(0, blueBtnX, 0, y0 + rowH + 1)
+autosetBtn.Text = "Set AutoTP"
+autosetBtn.Font = Enum.Font.GothamBold
+autosetBtn.TextSize = 12
+autosetBtn.BackgroundColor3 = bluebtn
+autosetBtn.TextColor3 = Color3.new(1,1,1)
+autosetBtn.BorderSizePixel = 0
+addButtonCorner(autosetBtn)
+
+--- 3. Set Spawn (ขั้นบันไดระดับ 2)
+local spawnCircle = makeStatusCircle(frame, statusColors.off, 2 * stepOffset, y0 + rowH * 2)
 local spawnBtn = Instance.new("TextButton", frame)
 spawnBtn.Size = UDim2.new(0, 110, 0, 22)
-spawnBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*2+1)
+spawnBtn.Position = UDim2.new(0, leftX + 18 + 2 * stepOffset, 0, y0 + rowH * 2 + 1)
 spawnBtn.Text = "Set Spawn"
 spawnBtn.Font = Enum.Font.GothamBold
 spawnBtn.TextSize = 13
 spawnBtn.BackgroundColor3 = darkbtn
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 spawnBtn.BorderSizePixel = 0
+addButtonCorner(spawnBtn)
 
---- 4. DiedTP
-local diedtpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*3)
+--- 4. DiedTP (ขั้นบันไดระดับ 3)
+local diedtpCircle = makeStatusCircle(frame, statusColors.off, 3 * stepOffset, y0 + rowH * 3)
 local diedtpBtn = Instance.new("TextButton", frame)
 diedtpBtn.Size = UDim2.new(0, 110, 0, 22)
-diedtpBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*3+1)
-diedtpBtn.Text = "DiedTP"
+diedtpBtn.Position = UDim2.new(0, leftX + 18 + 3 * stepOffset, 0, y0 + rowH * 3 + 1)
+diedtpBtn.Text = "DiedTP : ปิด"
 diedtpBtn.Font = Enum.Font.GothamBold
 diedtpBtn.TextSize = 13
 diedtpBtn.BackgroundColor3 = darkbtn
 diedtpBtn.TextColor3 = Color3.new(1,1,1)
 diedtpBtn.BorderSizePixel = 0
+addButtonCorner(diedtpBtn)
 
---- 5. Antiidle
-local antiidleCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*4)
+--- 5. Antiidle (ขั้นบันไดระดับ 4)
+local antiidleCircle = makeStatusCircle(frame, statusColors.off, 4 * stepOffset, y0 + rowH * 4)
 local antiidleBtn = Instance.new("TextButton", frame)
 antiidleBtn.Size = UDim2.new(0, 130, 0, 22)
-antiidleBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*4+1)
+antiidleBtn.Position = UDim2.new(0, leftX + 18 + 4 * stepOffset, 0, y0 + rowH * 4 + 1)
 antiidleBtn.Text = "Antiidle (Off)"
 antiidleBtn.Font = Enum.Font.GothamBold
 antiidleBtn.TextSize = 13
 antiidleBtn.BackgroundColor3 = bluebtn
 antiidleBtn.TextColor3 = Color3.new(1,1,1)
 antiidleBtn.BorderSizePixel = 0
+addButtonCorner(antiidleBtn)
 
---- 6. Autoพิมพ์ !rejoin
-local autorejoinCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*5)
+--- 6. Autoพิมพ์ !rejoin (ขั้นบันไดระดับ 5)
+local autorejoinCircle = makeStatusCircle(frame, statusColors.off, 5 * stepOffset, y0 + rowH * 5)
 local autorejoinBtn = Instance.new("TextButton", frame)
 autorejoinBtn.Size = UDim2.new(0, 160, 0, 22)
-autorejoinBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*5+1)
+autorejoinBtn.Position = UDim2.new(0, leftX + 18 + 5 * stepOffset, 0, y0 + rowH * 5 + 1)
 autorejoinBtn.Text = "Autoพิมพ์ !rejoin : ปิด"
 autorejoinBtn.Font = Enum.Font.GothamBold
 autorejoinBtn.TextSize = 13
 autorejoinBtn.BackgroundColor3 = darkbtn
 autorejoinBtn.TextColor3 = Color3.new(1,1,1)
 autorejoinBtn.BorderSizePixel = 0
+addButtonCorner(autorejoinBtn)
 
---- 7. Auto Jump
-local autojumpCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*6)
-local autojumpBtn = Instance.new("TextButton", frame)
-autojumpBtn.Size = UDim2.new(0, 110, 0, 22)
-autojumpBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*6+1)
-autojumpBtn.Text = "Auto Jump : ปิด"
-autojumpBtn.Font = Enum.Font.GothamBold
-autojumpBtn.TextSize = 13
-autojumpBtn.BackgroundColor3 = darkbtn
-autojumpBtn.TextColor3 = Color3.new(1,1,1)
-autojumpBtn.BorderSizePixel = 0
-
---- 8. Invisible Script
-local invisibleBtn = Instance.new("TextButton", frame)
-invisibleBtn.Size = UDim2.new(0, 160, 0, 22)
-invisibleBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*7+1)
-invisibleBtn.Text = "Run Invisible Script"
-invisibleBtn.Font = Enum.Font.GothamBold
-invisibleBtn.TextSize = 13
-invisibleBtn.BackgroundColor3 = bluebtn
-invisibleBtn.TextColor3 = Color3.new(1,1,1)
-invisibleBtn.BorderSizePixel = 0
-
---- 9. Ctrl+Click Teleport
-local ctrlclickCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*8)
+--- 7. Ctrl+Click Teleport (ขั้นบันไดระดับ 6)
+local ctrlclickCircle = makeStatusCircle(frame, statusColors.off, 6 * stepOffset, y0 + rowH * 6)
 local ctrlclickBtn = Instance.new("TextButton", frame)
 ctrlclickBtn.Size = UDim2.new(0, 180, 0, 22)
-ctrlclickBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*8+1)
+ctrlclickBtn.Position = UDim2.new(0, leftX + 18 + 6 * stepOffset, 0, y0 + rowH * 6 + 1)
 ctrlclickBtn.Text = "Ctrl+Click Teleport : ปิด"
 ctrlclickBtn.Font = Enum.Font.GothamBold
 ctrlclickBtn.TextSize = 13
 ctrlclickBtn.BackgroundColor3 = darkbtn
 ctrlclickBtn.TextColor3 = Color3.new(1,1,1)
 ctrlclickBtn.BorderSizePixel = 0
-
---- 10. Auto Walk
-local autoWalkCircle = makeStatusCircle(frame, statusColors.off, y0+rowH*9)
-local autoWalkBtn = Instance.new("TextButton", frame)
-autoWalkBtn.Size = UDim2.new(0, 120, 0, 22)
-autoWalkBtn.Position = UDim2.new(0, leftX+18, 0, y0+rowH*9+1)
-autoWalkBtn.Text = "Auto Walk : ปิด"
-autoWalkBtn.Font = Enum.Font.GothamBold
-autoWalkBtn.TextSize = 13
-autoWalkBtn.BackgroundColor3 = darkbtn
-autoWalkBtn.TextColor3 = Color3.new(1,1,1)
-autoWalkBtn.BorderSizePixel = 0
+addButtonCorner(ctrlclickBtn)
 
 -------------------- LOGIC (Utility) ------------------
 
--- 1. AutoTP (เลือด <= 9% วาปทุก 0.5 วิ)
+-- 1. Loop AutoTP (เพิ่ม logic พื้นฐาน)
+local loopautotpEnabled = false
+local loopPoints = {}
+loopautotpBtn.MouseButton1Click:Connect(function()
+    loopautotpEnabled = not loopautotpEnabled
+    loopautotpBtn.Text = "Loop AutoTP : " .. (loopautotpEnabled and "เปิด" or "ปิด")
+    loopautotpcircle.BackgroundColor3 = loopautotpEnabled and statusColors.on or statusColors.off
+end)
+addLoopTPBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        table.insert(loopPoints, char.HumanoidRootPart.Position)
+    end
+end)
+spawn(function()
+    while true do
+        if loopautotpEnabled and #loopPoints > 0 then
+            for _, pos in ipairs(loopPoints) do
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+                end
+                wait(1)  -- เวลาหน่วงระหว่างจุด
+            end
+        end
+        wait(0.1)
+    end
+end)
+
+-- 2. AutoTP (เลือด <= 9% วาปทุก 0.5 วิ)
 local autotpenabled = false
 local autotpPos
 local autoTP_HUMANOID = nil
@@ -247,7 +287,7 @@ autosetBtn.MouseButton1Click:Connect(function()
 end)
 
 player.CharacterAdded:Connect(function(char)
-    if spawnPos then
+    if diedtpEnabled and spawnPos then  -- ปรับให้เช็ค diedtpEnabled
         local hrp = char:WaitForChild("HumanoidRootPart", 3)
         if hrp then hrp.CFrame = CFrame.new(spawnPos) end
     end
@@ -276,123 +316,47 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
--- 2. Loop AutoTP (Support Multi Points)
-local loopAutoTPEnabled = false
-local loopAutoTP_Points = {}
-local loopAutoTP_Index = 1
-local loopAutoTP_Radius = 4
-local loopAutoTPLoop = nil
-
-local function updateLoopAutoTPBtnText()
-    loopautotpBtn.Text = "Loop AutoTP : " .. (loopAutoTPEnabled and "เปิด" or "ปิด") .. " ("..#loopAutoTP_Points.." จุด)"
-end
-
-addLoopTPBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        table.insert(loopAutoTP_Points, char.HumanoidRootPart.Position)
-        updateLoopAutoTPBtnText()
-    end
-end)
-
-loopautotpBtn.MouseButton1Click:Connect(function()
-    if not loopAutoTPEnabled and #loopAutoTP_Points == 0 then
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            table.insert(loopAutoTP_Points, char.HumanoidRootPart.Position)
-        end
-    end
-    loopAutoTPEnabled = not loopAutoTPEnabled
-    updateLoopAutoTPBtnText()
-    loopautotpcircle.BackgroundColor3 = loopAutoTPEnabled and statusColors.on or statusColors.off
-    if loopAutoTPEnabled then
-        if not loopAutoTPLoop then
-            loopAutoTPLoop = true
-            spawn(function()
-                loopAutoTP_Index = 1
-                while loopAutoTPEnabled and loopAutoTPLoop and #loopAutoTP_Points > 0 do
-                    local c = player.Character
-                    if c and c:FindFirstChild("HumanoidRootPart") and loopAutoTP_Points[loopAutoTP_Index] then
-                        local dist = (c.HumanoidRootPart.Position - loopAutoTP_Points[loopAutoTP_Index]).Magnitude
-                        if dist > loopAutoTP_Radius then
-                            c.HumanoidRootPart.CFrame = CFrame.new(loopAutoTP_Points[loopAutoTP_Index])
-                        else
-                            -- ไปจุดถัดไป เมื่ออยู่ในรัศมี
-                            loopAutoTP_Index = loopAutoTP_Index % #loopAutoTP_Points + 1
-                            wait(0.25)
-                        end
-                    end
-                    wait(0.1)
-                end
-                loopAutoTPLoop = nil
-            end)
-        end
-    else
-        loopAutoTPLoop = false
-    end
-end)
-
--- Reset Loop AutoTP Points with RightClick on Add Point
-addLoopTPBtn.MouseButton2Click:Connect(function()
-    loopAutoTP_Points = {}
-    loopAutoTP_Index = 1
-    updateLoopAutoTPBtnText()
-end)
-
 -- 3. Set Spawn
-spawnPos = nil
+local spawnPos = nil
 spawnBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         spawnPos = char.HumanoidRootPart.Position
         spawnCircle.BackgroundColor3 = statusColors.on
+        spawnBtn.Text = "Spawn Set!"
+        wait(2)
+        spawnBtn.Text = "Set Spawn"
     end
 end)
 
 -- 4. DiedTP
-local deathPos = nil
-player.CharacterAdded:Connect(function(char)
-    local hum = char:WaitForChild("Humanoid")
-    local diedFlag = false
-    hum.Died:Connect(function() diedFlag = true end)
-    game:GetService("RunService").Stepped:Connect(function()
-        if diedFlag and char and char:FindFirstChild("HumanoidRootPart") then
-            deathPos = char.HumanoidRootPart.Position
-            diedtpCircle.BackgroundColor3 = statusColors.on
-            diedFlag = false
-        end
-    end)
-end)
+local diedtpEnabled = false
 diedtpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if deathPos and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(deathPos)
-    end
+    diedtpEnabled = not diedtpEnabled
+    diedtpBtn.Text = "DiedTP : " .. (diedtpEnabled and "เปิด" or "ปิด")
+    diedtpCircle.BackgroundColor3 = diedtpEnabled and statusColors.on or statusColors.off
 end)
 
--- 5. AntiIdle (กันหลุด AFK 20 นาที)
+-- 5. Antiidle
 local antiidleEnabled = false
-local antiidleConn = nil
+local antiidleConn
 local function setAntiIdle(state)
     antiidleEnabled = state
     antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
     antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-    if antiidleConn then pcall(function() antiidleConn:Disconnect() end) antiidleConn = nil end
-    if state then
-        local vu = game:GetService("VirtualUser")
+    if state and not antiidleConn then
         antiidleConn = player.Idled:Connect(function()
-            while antiidleEnabled do
-                vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-                wait(1)
-                vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-                wait(60*19)
-            end
+            game:GetService("VirtualUser"):CaptureController()
+            game:GetService("VirtualUser"):ClickButton2(Vector2.new())
         end)
+    elseif not state and antiidleConn then
+        antiidleConn:Disconnect()
+        antiidleConn = nil
     end
 end
 antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
 
--- 6. Autoพิมพ์ !rejoin (Auto Rejoin เปิดปิดเองทุก 0.2 วินาที)
+-- 6. Autoพิมพ์ !rejoin
 local autorejoinEnabled = false
 local autorejoinLoop = nil
 
@@ -410,7 +374,7 @@ local function sendRejoin()
         local TextChatService = game:GetService("TextChatService")
         if TextChatService and TextChatService.TextChannels then
             for _,channel in pairs(TextChatService.TextChannels:GetChildren()) do
-                if channel:IsA("TextChatChannel") then
+                if channel:IsA("TextChannel") then
                     local ok2, _ = pcall(function()
                         channel:SendAsync("!rejoin")
                     end)
@@ -429,67 +393,24 @@ local function sendRejoin()
     end
 end
 
--- สลับเปิดปิด Auto Rejoin ทุก 0.2 วินาที
-local autorejoinToggleThread = nil
 autorejoinBtn.MouseButton1Click:Connect(function()
-    if autorejoinToggleThread then return end
-    autorejoinToggleThread = true
-    spawn(function()
-        while autorejoinToggleThread do
-            -- เปิด
-            autorejoinEnabled = true
-            autorejoinBtn.Text = "Autoพิมพ์ !rejoin : เปิด"
-            autorejoinCircle.BackgroundColor3 = statusColors.on
-            autorejoinLoop = true
-            spawn(function()
-                while autorejoinEnabled and autorejoinLoop do
-                    sendRejoin()
-                    wait(0.1)
-                end
-            end)
-            wait(0.2)
-            -- ปิด
-            autorejoinEnabled = false
-            autorejoinBtn.Text = "Autoพิมพ์ !rejoin : ปิด"
-            autorejoinCircle.BackgroundColor3 = statusColors.off
-            autorejoinLoop = false
-            wait(0.2)
-        end
-    end)
-end)
-
--- 7. Auto Jump
-local autoJumpEnabled = false
-local autoJumpLoop = nil
-autojumpBtn.MouseButton1Click:Connect(function()
-    autoJumpEnabled = not autoJumpEnabled
-    autojumpBtn.Text = "Auto Jump : " .. (autoJumpEnabled and "เปิด" or "ปิด")
-    autojumpCircle.BackgroundColor3 = autoJumpEnabled and statusColors.on or statusColors.off
-    if autoJumpEnabled and not autoJumpLoop then
-        autoJumpLoop = true
+    autorejoinEnabled = not autorejoinEnabled
+    autorejoinBtn.Text = "Autoพิมพ์ !rejoin : " .. (autorejoinEnabled and "เปิด" or "ปิด")
+    autorejoinCircle.BackgroundColor3 = autorejoinEnabled and statusColors.on or statusColors.off
+    if autorejoinEnabled then
+        autorejoinLoop = true
         spawn(function()
-            while autoJumpEnabled and player.Character and player.Character:FindFirstChildOfClass("Humanoid") do
-                local hum = player.Character:FindFirstChildOfClass("Humanoid")
-                if hum and hum:GetState() ~= Enum.HumanoidStateType.Jumping and hum:GetState() ~= Enum.HumanoidStateType.Freefall then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
-                wait(0.25)
+            while autorejoinLoop do
+                sendRejoin()
+                wait(0.2)
             end
-            autoJumpLoop = nil
         end)
-    elseif not autoJumpEnabled then
-        autoJumpLoop = false
+    else
+        autorejoinLoop = false
     end
 end)
 
--- 8. Run Invisible Script
-invisibleBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Invisible-script-20557"))()
-    end)
-end)
-
--- 9. Ctrl+Click Teleport
+-- 7. Ctrl+Click Teleport
 local ctrlClickEnabled = false
 ctrlclickBtn.MouseButton1Click:Connect(function()
     ctrlClickEnabled = not ctrlClickEnabled
@@ -509,32 +430,6 @@ mouse.Button1Down:Connect(function()
                 char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
             end
         end
-    end
-end)
-
--------------------- NEW: Auto Walk ------------------
-local autoWalkEnabled = false
-local autoWalkThread = nil
-autoWalkBtn.MouseButton1Click:Connect(function()
-    autoWalkEnabled = not autoWalkEnabled
-    autoWalkBtn.Text = "Auto Walk : " .. (autoWalkEnabled and "เปิด" or "ปิด")
-    autoWalkCircle.BackgroundColor3 = autoWalkEnabled and statusColors.on or statusColors.off
-    if autoWalkEnabled and not autoWalkThread then
-        autoWalkThread = true
-        spawn(function()
-            while autoWalkEnabled do
-                local char = player.Character
-                if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    -- เดินไปข้างหน้า
-                    hum:Move(Vector3.new(0,0,-1), true)
-                end
-                wait(0.05)
-            end
-            autoWalkThread = nil
-        end)
-    elseif not autoWalkEnabled then
-        autoWalkThread = false
     end
 end)
 
@@ -624,7 +519,8 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
             end
         end
     end
-    -- MouseWheel
+end)
+UIS.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseWheel then
         local function getTools()
             local tools = {}
