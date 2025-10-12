@@ -127,7 +127,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 200, 0, 240) -- ลดขนาด GUI
+MainFrame.Size = UDim2.new(0, 200, 0, 240)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -154,7 +154,7 @@ UIGradient.Rotation = 90
 UIGradient.Parent = MainFrame
 
 local DragBar = Instance.new("Frame")
-DragBar.Size = UDim2.new(1, 0, 0, 20) -- ปรับขนาด DragBar
+DragBar.Size = UDim2.new(1, 0, 0, 20)
 DragBar.Position = UDim2.new(0, 0, 0, 0)
 DragBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 DragBar.Active = true
@@ -205,7 +205,6 @@ local UICornerMini = Instance.new("UICorner")
 UICornerMini.CornerRadius = UDim.new(0, 8)
 UICornerMini.Parent = MiniButton
 
--- จัดเรียงให้ตรงกัน (ปรับขนาดและตำแหน่งให้เล็กลง)
 local ToggleAutoLock = Instance.new("TextButton")
 ToggleAutoLock.Size = UDim2.new(0, 160, 0, 24)
 ToggleAutoLock.Position = UDim2.new(0, 20, 0, 30)
@@ -556,12 +555,12 @@ local function getFrontFacingTarget()
     return best
 end
 
-local function moveCameraInFrontOfTarget(target)
+local function moveCameraBehindTarget(target)
     if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
     local cam = workspace.CurrentCamera
     local hrp = target.Character.HumanoidRootPart
     local forward = hrp.CFrame.LookVector
-    local camOffset = forward * 4
+    local camOffset = -forward * 4 -- Changed to -forward to position camera behind the target
     local camPos = hrp.Position + camOffset + Vector3.new(0, 2, 0)
     local lookAt = hrp.Position + Vector3.new(0, 2, 0)
     cam.CFrame = CFrame.new(camPos, lookAt)
@@ -721,7 +720,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
             waitingBodyHotkey = false
             bodyHotkeyBox:ReleaseFocus()
         elseif waitingResetHotkey and input.KeyCode ~= Enum.KeyCode.Unknown then
-            resetHitboxKey = input.KeyCode
+            resetHotkeyKey = input.KeyCode
             resetHotkeyBox.Text = keyToString(resetHitboxKey)
             waitingResetHotkey = false
             resetHotkeyBox:ReleaseFocus()
@@ -793,7 +792,7 @@ RunService.RenderStepped:Connect(function()
             target = newTarget
         end
         if target then
-            moveCameraInFrontOfTarget(target)
+            moveCameraBehindTarget(target)
             label.Text = "Locking: " .. target.Name
 
             local humanoid = target.Character and target.Character:FindFirstChildOfClass("Humanoid")
