@@ -109,7 +109,7 @@ for _, plr in ipairs(Players:GetPlayers()) do
 end
 
 ------------------------------------------------------------------
--- GUI SETUP (ปรับให้เรียบร้อยและเรียงหน้าใหม่ ไม่หลุดกรอบ)
+-- GUI SETUP (ปรับให้เรียบร้อยและเรียงหน้าใหม่ ไม่หลุดกรอบ, และย้ายไปด้านซ้าย)
 ------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LockOnGui"
@@ -118,8 +118,8 @@ ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 240, 0, 350)  -- เพิ่มความกว้างและความสูงเพื่อรองรับปุ่มและช่อง
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0, 10, 0.5, 0)  -- ย้ายไปด้านซ้าย (left-aligned)
+MainFrame.AnchorPoint = Vector2.new(0, 0.5)  -- Anchor ที่ด้านซ้ายกลางแนวตั้ง
 MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- สีดำ
 MainFrame.BackgroundTransparency = 0
 MainFrame.Active = true
@@ -173,8 +173,8 @@ UICornerMin.Parent = MinimizeButton
 
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 30, 0, 30)
-MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)
-MiniButton.AnchorPoint = Vector2.new(0.5, 0.5)
+MiniButton.Position = UDim2.new(0, 10, 0.5, 0)  -- ปรับให้เริ่มต้นด้านซ้ายเช่นกัน
+MiniButton.AnchorPoint = Vector2.new(0, 0.5)
 MiniButton.Text = "☰"
 MiniButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MiniButton.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -244,16 +244,32 @@ local UICornerReset = Instance.new("UICorner")
 UICornerReset.CornerRadius = UDim.new(0, 6)
 UICornerReset.Parent = ResetHitboxButton
 
--- ปุ่ม G I F S (เรียงแนวนอน ด้านล่างปุ่มหลัก กับสีใหม่: ดำ)
+-- Container สำหรับปุ่ม G I F S (กรอบสีขาวกับเส้นขอบดำ)
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Size = UDim2.new(0, 200, 0, 24)
+ButtonContainer.Position = UDim2.new(0, 20, 0, 150)
+ButtonContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)  -- สีขาว
+ButtonContainer.Parent = MainFrame
+
+local UICornerContainer = Instance.new("UICorner")
+UICornerContainer.CornerRadius = UDim.new(0, 6)
+UICornerContainer.Parent = ButtonContainer
+
+local UIStrokeContainer = Instance.new("UIStroke")
+UIStrokeContainer.Color = Color3.fromRGB(0, 0, 0)  -- เส้นขอบดำ
+UIStrokeContainer.Thickness = 1
+UIStrokeContainer.Parent = ButtonContainer
+
+-- ปุ่ม G I F S (เรียงแนวนอน ด้านล่างปุ่มหลัก กับสีใหม่: ดำ, และตัวอักษรสีขาวเต็ม)
 local LoadPasteWareButton = Instance.new("TextButton")  -- G (ดำ)
 LoadPasteWareButton.Size = UDim2.new(0, 40, 0, 24)
-LoadPasteWareButton.Position = UDim2.new(0, 20, 0, 150)
+LoadPasteWareButton.Position = UDim2.new(0, 0, 0, 0)
 LoadPasteWareButton.Text = "G"
 LoadPasteWareButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadPasteWareButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoadPasteWareButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
 LoadPasteWareButton.Font = Enum.Font.GothamSemibold
 LoadPasteWareButton.TextSize = 12
-LoadPasteWareButton.Parent = MainFrame
+LoadPasteWareButton.Parent = ButtonContainer
 
 local UICornerPasteWare = Instance.new("UICorner")
 UICornerPasteWare.CornerRadius = UDim.new(0, 6)
@@ -261,13 +277,13 @@ UICornerPasteWare.Parent = LoadPasteWareButton
 
 local LoadInvisibleScriptButton = Instance.new("TextButton")  -- I (ดำ)
 LoadInvisibleScriptButton.Size = UDim2.new(0, 40, 0, 24)
-LoadInvisibleScriptButton.Position = UDim2.new(0, 70, 0, 150)
+LoadInvisibleScriptButton.Position = UDim2.new(0, 50, 0, 0)
 LoadInvisibleScriptButton.Text = "I"
 LoadInvisibleScriptButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadInvisibleScriptButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoadInvisibleScriptButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
 LoadInvisibleScriptButton.Font = Enum.Font.GothamSemibold
 LoadInvisibleScriptButton.TextSize = 12
-LoadInvisibleScriptButton.Parent = MainFrame
+LoadInvisibleScriptButton.Parent = ButtonContainer
 
 local UICornerInvisible = Instance.new("UICorner")
 UICornerInvisible.CornerRadius = UDim.new(0, 6)
@@ -275,13 +291,13 @@ UICornerInvisible.Parent = LoadInvisibleScriptButton
 
 local LoadInfiniteYieldButton = Instance.new("TextButton")  -- F (ดำ)
 LoadInfiniteYieldButton.Size = UDim2.new(0, 40, 0, 24)
-LoadInfiniteYieldButton.Position = UDim2.new(0, 120, 0, 150)
+LoadInfiniteYieldButton.Position = UDim2.new(0, 100, 0, 0)
 LoadInfiniteYieldButton.Text = "F"
 LoadInfiniteYieldButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadInfiniteYieldButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoadInfiniteYieldButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
 LoadInfiniteYieldButton.Font = Enum.Font.GothamSemibold
 LoadInfiniteYieldButton.TextSize = 12
-LoadInfiniteYieldButton.Parent = MainFrame
+LoadInfiniteYieldButton.Parent = ButtonContainer
 
 local UICornerInfinite = Instance.new("UICorner")
 UICornerInfinite.CornerRadius = UDim.new(0, 6)
@@ -289,13 +305,13 @@ UICornerInfinite.Parent = LoadInfiniteYieldButton
 
 local LoadStandButton = Instance.new("TextButton")  -- S (ดำ)
 LoadStandButton.Size = UDim2.new(0, 40, 0, 24)
-LoadStandButton.Position = UDim2.new(0, 170, 0, 150)
+LoadStandButton.Position = UDim2.new(0, 150, 0, 0)
 LoadStandButton.Text = "S"
 LoadStandButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadStandButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoadStandButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
 LoadStandButton.Font = Enum.Font.GothamSemibold
 LoadStandButton.TextSize = 12
-LoadStandButton.Parent = MainFrame
+LoadStandButton.Parent = ButtonContainer
 
 local UICornerStand = Instance.new("UICorner")
 UICornerStand.CornerRadius = UDim.new(0, 6)
