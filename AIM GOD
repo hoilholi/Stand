@@ -39,6 +39,7 @@ end
 ------------------------------------------------------------------
 -- HITBOX SECTION (ปรับขนาด Hitbox จริง)
 ------------------------------------------------------------------
+-- ปรับขนาดจริงของ Head และ Body
 local function setHitboxSizes(char, head, body)
     head = math.clamp(head, 0.01, MAX_HITBOX_SIZE)
     body = math.clamp(body, 0.01, MAX_HITBOX_SIZE)
@@ -47,8 +48,9 @@ local function setHitboxSizes(char, head, body)
         part.Size = Vector3.new(head, head, head)
         local mesh = part:FindFirstChildOfClass("SpecialMesh")
         if mesh then
-            mesh.Scale = Vector3.new(1, 1, 1)
+            mesh.Scale = Vector3.new(1, 1, 1) -- รีเซ็ต scale เพื่อให้ขนาดสมจริง
         end
+        -- ไม่ set CanCollide/Anchored, ปล่อยให้เซิร์ฟเวอร์ควบคุม
     end
     if char:FindFirstChild("HumanoidRootPart") then
         local part = char.HumanoidRootPart
@@ -67,7 +69,7 @@ local function resetHitboxSizes(char)
         part.Size = DEFAULT_HEAD_SIZE
         local mesh = part:FindFirstChildOfClass("SpecialMesh")
         if mesh then
-            mesh.Scale = Vector3.new(1.25, 1.25, 1.25)
+            mesh.Scale = Vector3.new(1.25, 1.25, 1.25) -- ค่าเริ่มต้นทั่วไปสำหรับ Head mesh ใน Roblox
         end
     end
     if char:FindFirstChild("HumanoidRootPart") then
@@ -76,7 +78,7 @@ local function resetHitboxSizes(char)
     end
     for _, part in ipairs(char:GetChildren()) do
         if part:IsA("BasePart") and part.Name:find("Torso") then
-            part.Size = Vector3.new(2, 2, 1)
+            part.Size = Vector3.new(2, 2, 1) -- ค่าเริ่มต้นสำหรับ Torso
         end
     end
 end
@@ -117,7 +119,7 @@ for _, plr in ipairs(Players:GetPlayers()) do
 end
 
 ------------------------------------------------------------------
--- GUI SETUP (Mini Version)
+-- GUI SETUP (ย่อขนาดและจัดเรียงให้ตรงกัน)
 ------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LockOnGui"
@@ -125,11 +127,11 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 200, 0, 220)
+MainFrame.Size = UDim2.new(0, 200, 0, 240) -- ลดขนาด GUI
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BackgroundTransparency = 0.15
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BackgroundTransparency = 0.05
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 
@@ -138,23 +140,23 @@ UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(90, 90, 90)
+UIStroke.Color = Color3.fromRGB(100, 100, 100)
 UIStroke.Transparency = 0.5
 UIStroke.Thickness = 1
 UIStroke.Parent = MainFrame
 
 local UIGradient = Instance.new("UIGradient")
 UIGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 60))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
 }
 UIGradient.Rotation = 90
 UIGradient.Parent = MainFrame
 
 local DragBar = Instance.new("Frame")
-DragBar.Size = UDim2.new(1, 0, 0, 20)
+DragBar.Size = UDim2.new(1, 0, 0, 20) -- ปรับขนาด DragBar
 DragBar.Position = UDim2.new(0, 0, 0, 0)
-DragBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+DragBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 DragBar.Active = true
 DragBar.Parent = MainFrame
 
@@ -166,8 +168,8 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 8, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "LockOn"
-Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Text = "LockOn Settings"
+Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -175,12 +177,12 @@ Title.Parent = DragBar
 
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
-MinimizeButton.Position = UDim2.new(1, -20, 0.5, -8)
+MinimizeButton.Position = UDim2.new(1, -24, 0.5, -8)
 MinimizeButton.Text = "-"
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-MinimizeButton.TextColor3 = Color3.new(1, 1, 1)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+MinimizeButton.TextColor3 = Color3.new(1,1,1)
 MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.TextSize = 12
+MinimizeButton.TextSize = 14
 MinimizeButton.Parent = DragBar
 
 local UICornerMin = Instance.new("UICorner")
@@ -193,91 +195,92 @@ MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)
 MiniButton.AnchorPoint = Vector2.new(0.5, 0.5)
 MiniButton.Text = "☰"
 MiniButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MiniButton.TextColor3 = Color3.new(1, 1, 1)
+MiniButton.TextColor3 = Color3.new(1,1,1)
 MiniButton.Font = Enum.Font.GothamBold
 MiniButton.TextSize = 20
 MiniButton.Visible = false
 MiniButton.Parent = ScreenGui
 
 local UICornerMini = Instance.new("UICorner")
-UICornerMini.CornerRadius = UDim.new(0, 6)
+UICornerMini.CornerRadius = UDim.new(0, 8)
 UICornerMini.Parent = MiniButton
 
+-- จัดเรียงให้ตรงกัน (ปรับขนาดและตำแหน่งให้เล็กลง)
 local ToggleAutoLock = Instance.new("TextButton")
 ToggleAutoLock.Size = UDim2.new(0, 160, 0, 24)
-ToggleAutoLock.Position = UDim2.new(0, 20, 0, 28)
+ToggleAutoLock.Position = UDim2.new(0, 20, 0, 30)
 ToggleAutoLock.Text = "Auto-Lock: OFF"
-ToggleAutoLock.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleAutoLock.TextColor3 = Color3.new(1, 1, 1)
-ToggleAutoLock.Font = Enum.Font.Gotham
+ToggleAutoLock.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleAutoLock.TextColor3 = Color3.new(1,1,1)
+ToggleAutoLock.Font = Enum.Font.GothamSemibold
 ToggleAutoLock.TextSize = 12
 ToggleAutoLock.Parent = MainFrame
 
 local UICornerLock = Instance.new("UICorner")
-UICornerLock.CornerRadius = UDim.new(0, 5)
+UICornerLock.CornerRadius = UDim.new(0, 6)
 UICornerLock.Parent = ToggleAutoLock
 
 local ToggleAutoFire = Instance.new("TextButton")
 ToggleAutoFire.Size = UDim2.new(0, 160, 0, 24)
-ToggleAutoFire.Position = UDim2.new(0, 20, 0, 54)
+ToggleAutoFire.Position = UDim2.new(0, 20, 0, 58)
 ToggleAutoFire.Text = "Auto-Fire: OFF"
-ToggleAutoFire.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleAutoFire.TextColor3 = Color3.new(1, 1, 1)
-ToggleAutoFire.Font = Enum.Font.Gotham
+ToggleAutoFire.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleAutoFire.TextColor3 = Color3.new(1,1,1)
+ToggleAutoFire.Font = Enum.Font.GothamSemibold
 ToggleAutoFire.TextSize = 12
 ToggleAutoFire.Parent = MainFrame
 
 local UICornerFire = Instance.new("UICorner")
-UICornerFire.CornerRadius = UDim.new(0, 5)
+UICornerFire.CornerRadius = UDim.new(0, 6)
 UICornerFire.Parent = ToggleAutoFire
 
 local ToggleTeamCheck = Instance.new("TextButton")
 ToggleTeamCheck.Size = UDim2.new(0, 160, 0, 24)
-ToggleTeamCheck.Position = UDim2.new(0, 20, 0, 80)
+ToggleTeamCheck.Position = UDim2.new(0, 20, 0, 86)
 ToggleTeamCheck.Text = "Team Check: ON"
-ToggleTeamCheck.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleTeamCheck.TextColor3 = Color3.new(1, 1, 1)
-ToggleTeamCheck.Font = Enum.Font.Gotham
+ToggleTeamCheck.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleTeamCheck.TextColor3 = Color3.new(1,1,1)
+ToggleTeamCheck.Font = Enum.Font.GothamSemibold
 ToggleTeamCheck.TextSize = 12
 ToggleTeamCheck.Parent = MainFrame
 
 local UICornerTeam = Instance.new("UICorner")
-UICornerTeam.CornerRadius = UDim.new(0, 5)
+UICornerTeam.CornerRadius = UDim.new(0, 6)
 UICornerTeam.Parent = ToggleTeamCheck
 
 local ResetHitboxButton = Instance.new("TextButton")
 ResetHitboxButton.Size = UDim2.new(0, 160, 0, 24)
-ResetHitboxButton.Position = UDim2.new(0, 20, 0, 106)
+ResetHitboxButton.Position = UDim2.new(0, 20, 0, 114)
 ResetHitboxButton.Text = "Reset Hitboxes"
-ResetHitboxButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-ResetHitboxButton.TextColor3 = Color3.new(1, 1, 1)
-ResetHitboxButton.Font = Enum.Font.Gotham
+ResetHitboxButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+ResetHitboxButton.TextColor3 = Color3.new(1,1,1)
+ResetHitboxButton.Font = Enum.Font.GothamSemibold
 ResetHitboxButton.TextSize = 12
 ResetHitboxButton.Parent = MainFrame
 
 local UICornerReset = Instance.new("UICorner")
-UICornerReset.CornerRadius = UDim.new(0, 5)
+UICornerReset.CornerRadius = UDim.new(0, 6)
 UICornerReset.Parent = ResetHitboxButton
 
 local distanceLabel = Instance.new("TextLabel")
 distanceLabel.Size = UDim2.new(0, 80, 0, 20)
-distanceLabel.Position = UDim2.new(0, 20, 0, 132)
+distanceLabel.Position = UDim2.new(0, 20, 0, 142)
 distanceLabel.BackgroundTransparency = 1
-distanceLabel.Text = "Distance:"
-distanceLabel.TextColor3 = Color3.new(1, 1, 1)
-distanceLabel.Font = Enum.Font.Gotham
-distanceLabel.TextSize = 11
+distanceLabel.Text = "Lock Distance:"
+distanceLabel.TextColor3 = Color3.new(1,1,1)
+distanceLabel.Font = Enum.Font.GothamSemibold
+distanceLabel.TextSize = 10
 distanceLabel.TextXAlignment = Enum.TextXAlignment.Left
 distanceLabel.Parent = MainFrame
 
 local distanceBox = Instance.new("TextBox")
-distanceBox.Size = UDim2.new(0, 60, 0, 20)
-distanceBox.Position = UDim2.new(0, 100, 0, 132)
+distanceBox.Size = UDim2.new(0, 80, 0, 20)
+distanceBox.Position = UDim2.new(0, 100, 0, 142)
 distanceBox.Text = tostring(LOCK_DISTANCE)
-distanceBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-distanceBox.TextColor3 = Color3.new(1, 1, 1)
+distanceBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+distanceBox.TextColor3 = Color3.new(1,1,1)
 distanceBox.Font = Enum.Font.Gotham
-distanceBox.TextSize = 11
+distanceBox.TextSize = 10
 distanceBox.ClearTextOnFocus = false
 distanceBox.Parent = MainFrame
 
@@ -287,23 +290,23 @@ UICornerDist.Parent = distanceBox
 
 local headSizeLabel = Instance.new("TextLabel")
 headSizeLabel.Size = UDim2.new(0, 80, 0, 20)
-headSizeLabel.Position = UDim2.new(0, 20, 0, 154)
+headSizeLabel.Position = UDim2.new(0, 20, 0, 164)
 headSizeLabel.BackgroundTransparency = 1
-headSizeLabel.Text = "Head Size:"
-headSizeLabel.TextColor3 = Color3.new(1, 1, 1)
-headSizeLabel.Font = Enum.Font.Gotham
-headSizeLabel.TextSize = 11
+headSizeLabel.Text = "Head Hitbox:"
+headSizeLabel.TextColor3 = Color3.new(1,1,1)
+headSizeLabel.Font = Enum.Font.GothamSemibold
+headSizeLabel.TextSize = 10
 headSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
 headSizeLabel.Parent = MainFrame
 
 local headSizeBox = Instance.new("TextBox")
-headSizeBox.Size = UDim2.new(0, 60, 0, 20)
-headSizeBox.Position = UDim2.new(0, 100, 0, 154)
+headSizeBox.Size = UDim2.new(0, 80, 0, 20)
+headSizeBox.Position = UDim2.new(0, 100, 0, 164)
 headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
-headSizeBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-headSizeBox.TextColor3 = Color3.new(1, 1, 1)
+headSizeBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+headSizeBox.TextColor3 = Color3.new(1,1,1)
 headSizeBox.Font = Enum.Font.Gotham
-headSizeBox.TextSize = 11
+headSizeBox.TextSize = 10
 headSizeBox.ClearTextOnFocus = false
 headSizeBox.Parent = MainFrame
 
@@ -313,23 +316,23 @@ UICornerHead.Parent = headSizeBox
 
 local bodySizeLabel = Instance.new("TextLabel")
 bodySizeLabel.Size = UDim2.new(0, 80, 0, 20)
-bodySizeLabel.Position = UDim2.new(0, 20, 0, 176)
+bodySizeLabel.Position = UDim2.new(0, 20, 0, 186)
 bodySizeLabel.BackgroundTransparency = 1
-bodySizeLabel.Text = "Body Size:"
-bodySizeLabel.TextColor3 = Color3.new(1, 1, 1)
-bodySizeLabel.Font = Enum.Font.Gotham
-bodySizeLabel.TextSize = 11
+bodySizeLabel.Text = "Body Hitbox:"
+bodySizeLabel.TextColor3 = Color3.new(1,1,1)
+bodySizeLabel.Font = Enum.Font.GothamSemibold
+bodySizeLabel.TextSize = 10
 bodySizeLabel.TextXAlignment = Enum.TextXAlignment.Left
 bodySizeLabel.Parent = MainFrame
 
 local bodySizeBox = Instance.new("TextBox")
-bodySizeBox.Size = UDim2.new(0, 60, 0, 20)
-bodySizeBox.Position = UDim2.new(0, 100, 0, 176)
+bodySizeBox.Size = UDim2.new(0, 80, 0, 20)
+bodySizeBox.Position = UDim2.new(0, 100, 0, 186)
 bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
-bodySizeBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-bodySizeBox.TextColor3 = Color3.new(1, 1, 1)
+bodySizeBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+bodySizeBox.TextColor3 = Color3.new(1,1,1)
 bodySizeBox.Font = Enum.Font.Gotham
-bodySizeBox.TextSize = 11
+bodySizeBox.TextSize = 10
 bodySizeBox.ClearTextOnFocus = false
 bodySizeBox.Parent = MainFrame
 
@@ -339,53 +342,87 @@ UICornerBody.Parent = bodySizeBox
 
 local keySectionLabel = Instance.new("TextLabel")
 keySectionLabel.Size = UDim2.new(1, -40, 0, 16)
-keySectionLabel.Position = UDim2.new(0, 20, 0, 198)
+keySectionLabel.Position = UDim2.new(0, 20, 0, 208)
 keySectionLabel.BackgroundTransparency = 1
 keySectionLabel.Text = "Hotkeys:"
-keySectionLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+keySectionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 keySectionLabel.Font = Enum.Font.GothamBold
 keySectionLabel.TextSize = 10
 keySectionLabel.TextXAlignment = Enum.TextXAlignment.Left
 keySectionLabel.Parent = MainFrame
 
+local headHotkeyLabel = Instance.new("TextLabel")
+headHotkeyLabel.Size = UDim2.new(0, 60, 0, 14)
+headHotkeyLabel.Position = UDim2.new(0, 20, 0, 224)
+headHotkeyLabel.BackgroundTransparency = 1
+headHotkeyLabel.Text = "Head Hotkey:"
+headHotkeyLabel.TextColor3 = Color3.new(1,1,1)
+headHotkeyLabel.Font = Enum.Font.Gotham
+headHotkeyLabel.TextSize = 9
+headHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+headHotkeyLabel.Parent = MainFrame
+
 local headHotkeyBox = Instance.new("TextBox")
-headHotkeyBox.Size = UDim2.new(0, 30, 0, 16)
-headHotkeyBox.Position = UDim2.new(0, 20, 0, 216)
+headHotkeyBox.Size = UDim2.new(0, 30, 0, 14)
+headHotkeyBox.Position = UDim2.new(0, 80, 0, 224)
 headHotkeyBox.Text = keyToString(toggleHeadHitboxKey)
 headHotkeyBox.ClearTextOnFocus = false
-headHotkeyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-headHotkeyBox.TextColor3 = Color3.new(1, 1, 1)
+headHotkeyBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+headHotkeyBox.TextColor3 = Color3.new(1,1,1)
 headHotkeyBox.Font = Enum.Font.Gotham
-headHotkeyBox.TextSize = 10
+headHotkeyBox.TextSize = 9
 headHotkeyBox.Parent = MainFrame
 
 local UICornerHeadHot = Instance.new("UICorner")
 UICornerHeadHot.CornerRadius = UDim.new(0, 4)
 UICornerHeadHot.Parent = headHotkeyBox
 
+local bodyHotkeyLabel = Instance.new("TextLabel")
+bodyHotkeyLabel.Size = UDim2.new(0, 60, 0, 14)
+bodyHotkeyLabel.Position = UDim2.new(0, 120, 0, 224)
+bodyHotkeyLabel.BackgroundTransparency = 1
+bodyHotkeyLabel.Text = "Body Hotkey:"
+bodyHotkeyLabel.TextColor3 = Color3.new(1,1,1)
+bodyHotkeyLabel.Font = Enum.Font.Gotham
+bodyHotkeyLabel.TextSize = 9
+bodyHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+bodyHotkeyLabel.Parent = MainFrame
+
 local bodyHotkeyBox = Instance.new("TextBox")
-bodyHotkeyBox.Size = UDim2.new(0, 30, 0, 16)
-bodyHotkeyBox.Position = UDim2.new(0, 54, 0, 216)
+bodyHotkeyBox.Size = UDim2.new(0, 30, 0, 14)
+bodyHotkeyBox.Position = UDim2.new(0, 180, 0, 224)
+bodyHotkeyBox.AnchorPoint = Vector2.new(1,0)
 bodyHotkeyBox.Text = keyToString(toggleBodyHitboxKey)
 bodyHotkeyBox.ClearTextOnFocus = false
-bodyHotkeyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-bodyHotkeyBox.TextColor3 = Color3.new(1, 1, 1)
+bodyHotkeyBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+bodyHotkeyBox.TextColor3 = Color3.new(1,1,1)
 bodyHotkeyBox.Font = Enum.Font.Gotham
-bodyHotkeyBox.TextSize = 10
+bodyHotkeyBox.TextSize = 9
 bodyHotkeyBox.Parent = MainFrame
 
 local UICornerBodyHot = Instance.new("UICorner")
 UICornerBodyHot.CornerRadius = UDim.new(0, 4)
 UICornerBodyHot.Parent = bodyHotkeyBox
 
+local keyLockLabel = Instance.new("TextLabel")
+keyLockLabel.Size = UDim2.new(0, 60, 0, 14)
+keyLockLabel.Position = UDim2.new(0, 20, 0, 240)
+keyLockLabel.BackgroundTransparency = 1
+keyLockLabel.Text = "Auto-Lock Key:"
+keyLockLabel.TextColor3 = Color3.new(1,1,1)
+keyLockLabel.Font = Enum.Font.Gotham
+keyLockLabel.TextSize = 9
+keyLockLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyLockLabel.Parent = MainFrame
+
 local keyLockBox = Instance.new("TextBox")
-keyLockBox.Size = UDim2.new(0, 30, 0, 16)
-keyLockBox.Position = UDim2.new(0, 88, 0, 216)
+keyLockBox.Size = UDim2.new(0, 30, 0, 14)
+keyLockBox.Position = UDim2.new(0, 80, 0, 240)
 keyLockBox.Text = keyToString(toggleLockKey)
-keyLockBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-keyLockBox.TextColor3 = Color3.new(1, 1, 1)
+keyLockBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+keyLockBox.TextColor3 = Color3.new(1,1,1)
 keyLockBox.Font = Enum.Font.Gotham
-keyLockBox.TextSize = 10
+keyLockBox.TextSize = 9
 keyLockBox.ClearTextOnFocus = false
 keyLockBox.Parent = MainFrame
 
@@ -393,14 +430,26 @@ local UICornerLockKey = Instance.new("UICorner")
 UICornerLockKey.CornerRadius = UDim.new(0, 4)
 UICornerLockKey.Parent = keyLockBox
 
+local keyFireLabel = Instance.new("TextLabel")
+keyFireLabel.Size = UDim2.new(0, 60, 0, 14)
+keyFireLabel.Position = UDim2.new(0, 120, 0, 240)
+keyFireLabel.BackgroundTransparency = 1
+keyFireLabel.Text = "Auto-Fire Key:"
+keyFireLabel.TextColor3 = Color3.new(1,1,1)
+keyFireLabel.Font = Enum.Font.Gotham
+keyFireLabel.TextSize = 9
+keyFireLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyFireLabel.Parent = MainFrame
+
 local keyFireBox = Instance.new("TextBox")
-keyFireBox.Size = UDim2.new(0, 30, 0, 16)
-keyFireBox.Position = UDim2.new(0, 122, 0, 216)
+keyFireBox.Size = UDim2.new(0, 30, 0, 14)
+keyFireBox.Position = UDim2.new(0, 180, 0, 240)
+keyFireBox.AnchorPoint = Vector2.new(1,0)
 keyFireBox.Text = keyToString(toggleFireKey)
-keyFireBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-keyFireBox.TextColor3 = Color3.new(1, 1, 1)
+keyFireBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+keyFireBox.TextColor3 = Color3.new(1,1,1)
 keyFireBox.Font = Enum.Font.Gotham
-keyFireBox.TextSize = 10
+keyFireBox.TextSize = 9
 keyFireBox.ClearTextOnFocus = false
 keyFireBox.Parent = MainFrame
 
@@ -408,15 +457,26 @@ local UICornerFireKey = Instance.new("UICorner")
 UICornerFireKey.CornerRadius = UDim.new(0, 4)
 UICornerFireKey.Parent = keyFireBox
 
+local resetHotkeyLabel = Instance.new("TextLabel")
+resetHotkeyLabel.Size = UDim2.new(0, 60, 0, 14)
+resetHotkeyLabel.Position = UDim2.new(0, 20, 0, 256)
+resetHotkeyLabel.BackgroundTransparency = 1
+resetHotkeyLabel.Text = "Reset Hotkey:"
+resetHotkeyLabel.TextColor3 = Color3.new(1,1,1)
+resetHotkeyLabel.Font = Enum.Font.Gotham
+resetHotkeyLabel.TextSize = 9
+resetHotkeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+resetHotkeyLabel.Parent = MainFrame
+
 local resetHotkeyBox = Instance.new("TextBox")
-resetHotkeyBox.Size = UDim2.new(0, 30, 0, 16)
-resetHotkeyBox.Position = UDim2.new(0, 156, 0, 216)
+resetHotkeyBox.Size = UDim2.new(0, 30, 0, 14)
+resetHotkeyBox.Position = UDim2.new(0, 80, 0, 256)
 resetHotkeyBox.Text = keyToString(resetHitboxKey)
 resetHotkeyBox.ClearTextOnFocus = false
-resetHotkeyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-resetHotkeyBox.TextColor3 = Color3.new(1, 1, 1)
+resetHotkeyBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+resetHotkeyBox.TextColor3 = Color3.new(1,1,1)
 resetHotkeyBox.Font = Enum.Font.Gotham
-resetHotkeyBox.TextSize = 10
+resetHotkeyBox.TextSize = 9
 resetHotkeyBox.Parent = MainFrame
 
 local UICornerResetKey = Instance.new("UICorner")
@@ -425,13 +485,13 @@ UICornerResetKey.Parent = resetHotkeyBox
 
 local label = Instance.new("TextLabel")
 label.Size = UDim2.new(1, -40, 0, 20)
-label.Position = UDim2.new(0, 20, 0, 234)
+label.Position = UDim2.new(0, 20, 0, 272)
 label.Text = ""
-label.TextColor3 = Color3.new(1, 1, 1)
+label.TextColor3 = Color3.new(1,1,1)
 label.BackgroundTransparency = 1
 label.TextStrokeTransparency = 0.6
 label.Font = Enum.Font.Gotham
-label.TextSize = 11
+label.TextSize = 12
 label.TextXAlignment = Enum.TextXAlignment.Left
 label.Parent = MainFrame
 
@@ -522,19 +582,19 @@ end
 ToggleAutoLock.MouseButton1Click:Connect(function()
     autoLockEnabled = not autoLockEnabled
     ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
-    ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(50, 50, 50)
+    ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(90, 200, 90) or Color3.fromRGB(60, 60, 60)
 end)
 
 ToggleAutoFire.MouseButton1Click:Connect(function()
     autoFireEnabled = not autoFireEnabled
     ToggleAutoFire.Text = "Auto-Fire: " .. (autoFireEnabled and "ON" or "OFF")
-    ToggleAutoFire.BackgroundColor3 = autoFireEnabled and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(50, 50, 50)
+    ToggleAutoFire.BackgroundColor3 = autoFireEnabled and Color3.fromRGB(90, 200, 90) or Color3.fromRGB(60, 60, 60)
 end)
 
 ToggleTeamCheck.MouseButton1Click:Connect(function()
     teamCheckEnabled = not teamCheckEnabled
     ToggleTeamCheck.Text = "Team Check: " .. (teamCheckEnabled and "ON" or "OFF")
-    ToggleTeamCheck.BackgroundColor3 = teamCheckEnabled and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(50, 50, 50)
+    ToggleTeamCheck.BackgroundColor3 = teamCheckEnabled and Color3.fromRGB(90, 200, 90) or Color3.fromRGB(60, 60, 60)
 end)
 
 ResetHitboxButton.MouseButton1Click:Connect(function()
@@ -718,6 +778,7 @@ do
     end)
 end
 
+-- เรียกอัปเดต hitbox ทุกๆ 1 วินาที ป้องกันโดนรีเซ็ต
 task.spawn(function()
     while true do
         updateAllHitboxes()
@@ -734,6 +795,7 @@ RunService.RenderStepped:Connect(function()
         if target then
             moveCameraInFrontOfTarget(target)
             label.Text = "Locking: " .. target.Name
+
             local humanoid = target.Character and target.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 if lastTarget ~= target then
