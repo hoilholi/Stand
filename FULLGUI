@@ -592,7 +592,7 @@ LoadStandButton.MouseButton1Click:Connect(function()
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.F then
+    if not processed and input.KeyCode == Enum.KeyCode.V then
         autoLockEnabled = not autoLockEnabled
         ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
         ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
