@@ -9,29 +9,150 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 -- CONFIG STATE
-local LOCK_DISTANCE = 200  -- ปรับค่าเริ่มต้นเป็น 200 ตามคำขอ
+local LOCK_DISTANCE = 200
 local minLockDistance, maxLockDistance = 10, math.huge
-local HEAD_HITBOX_SIZE = 6  -- ปรับเริ่มต้นตามที่ขอ (หัว=6)
-local BODY_HITBOX_SIZE = 2  -- ปรับเริ่มต้นตามที่ขอ (ตัว=2)
-local MAX_HITBOX_SIZE = 50
-local ZOOM_DISTANCE = 10  -- ระยะเริ่มต้นของการซูม
-local MIN_ZOOM = 2  -- ระยะซูมใกล้สุด
-local MAX_ZOOM = 20  -- ระยะซูมไกลสุด
-local ZOOM_STEP = 1  -- ขั้นตอนการซูม
+local HEAD_HITBOX_SIZE = 6
+local BODY_HITBOX_SIZE = 2
+local MAX_HITBOX_SIZE = math.huge
+local TP_WALK_SPEED = 0.1
+local MIN_TP_WALK_SPEED = 0.1
+local MAX_TP_WALK_SPEED = 100
+local ANTI_AFK_ENABLED = true
+local ANTI_AFK_INTERVAL = 1200
+local ESP_MAX_DISTANCE = 500
 
 -- ขนาดปกติของ Hitbox
 local DEFAULT_HEAD_SIZE = Vector3.new(2, 1, 1)
 local DEFAULT_BODY_SIZE = Vector3.new(2, 2, 1)
 
--- ฟังก์ชันแปลง Enum.KeyCode เป็นตัวอักษร (แสดงใน GUI)
+-- ตารางสำหรับขนาด Hitbox เฉพาะผู้เล่น
+local customHeadSize = {}
+local customBodySize = {}
+
+-- Infinite Jump State
+local infJumpEnabled = false
+-- Tpwalk State
+local tpWalkEnabled = false
+local TPLoopFunc = nil
+-- ESP State
+local espEnabled = false
+local espBillboards = {}
+-- Anti-AFK State
+local antiAfkEnabled = ANTI_AFK_ENABLED
+-- Anti-Fling State
+local antiFlingEnabled = false
+local antiflingConn = nil
+-- Noclip State
+local noclipEnabled = false
+local noclipConn = nil
+
+-- ฟังก์ชันแจ้งเตือน
+local function notify(title, text)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 3
+    })
+end
+
+-- ฟังก์ชันแปลง Enum.KeyCode เป็นตัวอักษร
 local function keyToString(key)
     return (key and tostring(key):gsub("Enum.KeyCode.", "")) or ""
 end
 
 ------------------------------------------------------------------
--- HITBOX SECTION (ปรับขนาด Hitbox จริง)
+-- FLOAT SECTION
 ------------------------------------------------------------------
--- ปรับขนาดจริงของ Head และ Body
+local function float()
+    local plr = Players.LocalPlayer
+    local char = plr.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local rootPart = char.HumanoidRootPart
+        if not rootPart:FindFirstChild("Float") then
+            local bodyPos = Instance.new("BodyPosition")
+            bodyPos.Name = "Float"
+            bodyPos.MaxForce = Vector3.new(0, 100000, 0)
+            bodyPos.Position = rootPart.Position
+            bodyPos.Parent = rootPart
+            notify('Float Enabled')
+        end
+    end
+end
+
+local function unfloat()
+    local plr = Players.LocalPlayer
+    local char = plr.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local rootPart = char.HumanoidRootPart
+        if rootPart:FindFirstChild("Float") then
+            rootPart.Float:Destroy()
+            notify('Float Disabled')
+        end
+    end
+end
+
+------------------------------------------------------------------
+-- NOCLIP SECTION
+------------------------------------------------------------------
+local function enableNoclip()
+    if noclipConn then
+        noclipConn:Disconnect()
+    end
+    noclipConn = RunService.Stepped:Connect(function()
+        if player.Character then
+            for _, part in ipairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+    notify('Noclip Enabled')
+end
+
+local function disableNoclip()
+    if noclipConn then
+        noclipConn:Disconnect()
+        noclipConn = nil
+    end
+    if player.Character then
+        for _, part in ipairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+    notify('Noclip Disabled')
+end
+
+------------------------------------------------------------------
+-- ANTI-AFK SECTION
+------------------------------------------------------------------
+local function antiAfkAction()
+    if antiAfkEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local originalPos = player.Character.HumanoidRootPart.CFrame
+            player.Character.HumanoidRootPart.CFrame = originalPos + Vector3.new(0, 0.1, 0)
+            task.wait(0.1)
+            player.Character.HumanoidRootPart.CFrame = originalPos
+            notify("Anti-AFK", "Performed anti-AFK action")
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        if antiAfkEnabled then
+            antiAfkAction()
+        end
+        task.wait(ANTI_AFK_INTERVAL)
+    end
+end)
+
+------------------------------------------------------------------
+-- HITBOX SECTION
+------------------------------------------------------------------
 local function setHitboxSizes(char, head, body)
     head = math.clamp(head, 0.01, MAX_HITBOX_SIZE)
     body = math.clamp(body, 0.01, MAX_HITBOX_SIZE)
@@ -40,9 +161,8 @@ local function setHitboxSizes(char, head, body)
         part.Size = Vector3.new(head, head, head)
         local mesh = part:FindFirstChildOfClass("SpecialMesh")
         if mesh then
-            mesh.Scale = Vector3.new(1, 1, 1) -- รีเซ็ต scale เพื่อให้ขนาดสมจริง
+            mesh.Scale = Vector3.new(1, 1, 1)
         end
-        -- ไม่ set CanCollide/Anchored, ปล่อยให้เซิร์ฟเวอร์ควบคุม
     end
     if char:FindFirstChild("HumanoidRootPart") then
         local part = char.HumanoidRootPart
@@ -61,7 +181,7 @@ local function resetHitboxSizes(char)
         part.Size = DEFAULT_HEAD_SIZE
         local mesh = part:FindFirstChildOfClass("SpecialMesh")
         if mesh then
-            mesh.Scale = Vector3.new(1.25, 1.25, 1.25) -- ค่าเริ่มต้นทั่วไปสำหรับ Head mesh ใน Roblox
+            mesh.Scale = Vector3.new(1.25, 1.25, 1.25)
         end
     end
     if char:FindFirstChild("HumanoidRootPart") then
@@ -70,7 +190,7 @@ local function resetHitboxSizes(char)
     end
     for _, part in ipairs(char:GetChildren()) do
         if part:IsA("BasePart") and part.Name:find("Torso") then
-            part.Size = Vector3.new(2, 2, 1) -- ค่าเริ่มต้นสำหรับ Torso
+            part.Size = Vector3.new(2, 2, 1)
         end
     end
 end
@@ -78,38 +198,217 @@ end
 local function updateAllHitboxes()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
-            setHitboxSizes(plr.Character, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
+            local h = customHeadSize[plr] or HEAD_HITBOX_SIZE
+            local b = customBodySize[plr] or BODY_HITBOX_SIZE
+            setHitboxSizes(plr.Character, h, b)
         end
     end
 end
 
 local function resetAllHitboxes()
+    customHeadSize = {}
+    customBodySize = {}
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
             resetHitboxSizes(plr.Character)
         end
     end
-    HEAD_HITBOX_SIZE = 6  -- รีเซ็ตเป็นค่าเริ่มต้นใหม่
+    HEAD_HITBOX_SIZE = 6
     BODY_HITBOX_SIZE = 2
-    headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
-    bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+    globalHeadSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+    globalBodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
 end
 
 Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(function(char)
-        task.wait(0.2)
-        setHitboxSizes(char, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
-    end)
+    if plr ~= player then
+        plr.CharacterAdded:Connect(function(char)
+            task.wait(0.2)
+            local h = customHeadSize[plr] or HEAD_HITBOX_SIZE
+            local b = customBodySize[plr] or BODY_HITBOX_SIZE
+            setHitboxSizes(char, h, b)
+            if espEnabled then
+                createESP(plr)
+            end
+        end)
+    end
 end)
 
 for _, plr in ipairs(Players:GetPlayers()) do
     if plr ~= player and plr.Character then
-        setHitboxSizes(plr.Character, HEAD_HITBOX_SIZE, BODY_HITBOX_SIZE)
+        local h = customHeadSize[plr] or HEAD_HITBOX_SIZE
+        local b = customBodySize[plr] or BODY_HITBOX_SIZE
+        setHitboxSizes(plr.Character, h, b)
+        if espEnabled then
+            createESP(plr)
+        end
     end
 end
 
 ------------------------------------------------------------------
--- GUI SETUP (ปรับให้เรียบร้อยและเรียงหน้าใหม่ ไม่หลุดกรอบ, และย้ายไปตรงกลางจอ)
+-- ESP SECTION
+------------------------------------------------------------------
+local function createESP(plr)
+    if plr == player or not plr.Character or not plr.Character:FindFirstChild("Head") or not plr.Character:FindFirstChild("Humanoid") then return end
+    local head = plr.Character.Head
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_" .. plr.Name
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 100, 0, 70)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = head
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0, 20)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = plr.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.Parent = billboard
+
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "HealthLabel"
+    healthLabel.Size = UDim2.new(1, 0, 0, 20)
+    healthLabel.Position = UDim2.new(0, 0, 0, 20)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "Health: 100"
+    healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    healthLabel.TextStrokeTransparency = 0.5
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.TextSize = 12
+    healthLabel.Parent = billboard
+
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.Size = UDim2.new(1, 0, 0, 20)
+    distanceLabel.Position = UDim2.new(0, 0, 0, 40)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Text = "Distance: 0.0"
+    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    distanceLabel.TextStrokeTransparency = 0.5
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.TextSize = 12
+    distanceLabel.Parent = billboard
+
+    espBillboards[plr] = billboard
+
+    plr.AncestryChanged:Connect(function()
+        if not plr:IsDescendantOf(game) then
+            if espBillboards[plr] then
+                espBillboards[plr]:Destroy()
+                espBillboards[plr] = nil
+            end
+        end
+    end)
+end
+
+local function updateESP()
+    for plr, billboard in pairs(espBillboards) do
+        if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = plr.Character.Humanoid
+            local head = plr.Character.Head
+            local healthLabel = billboard:FindFirstChild("HealthLabel")
+            local distanceLabel = billboard:FindFirstChild("DistanceLabel")
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local distance = (player.Character.HumanoidRootPart.Position - head.Position).Magnitude
+                billboard.Enabled = distance <= ESP_MAX_DISTANCE
+                if billboard.Enabled then
+                    if healthLabel then
+                        healthLabel.Text = "Health: " .. math.floor(humanoid.Health)
+                        healthLabel.TextColor3 = Color3.fromRGB(255 * (1 - humanoid.Health / humanoid.MaxHealth), 255 * (humanoid.Health / humanoid.MaxHealth), 0)
+                    end
+                    if distanceLabel then
+                        distanceLabel.Text = string.format("Distance: %.1f", distance)
+                    end
+                    local scale = math.clamp(1 - (distance / ESP_MAX_DISTANCE), 0.5, 1)
+                    billboard.Size = UDim2.new(0, 100 * scale, 0, 70 * scale)
+                end
+            else
+                billboard.Enabled = false
+            end
+        else
+            billboard:Destroy()
+            espBillboards[plr] = nil
+        end
+    end
+end
+
+local function toggleESP(state)
+    if state then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                createESP(plr)
+            end
+        end
+    else
+        for _, billboard in pairs(espBillboards) do
+            billboard:Destroy()
+        end
+        espBillboards = {}
+    end
+end
+
+------------------------------------------------------------------
+-- TPWALK SECTION
+------------------------------------------------------------------
+local function enableTpWalk(speed)
+    if TPLoopFunc then
+        TPLoopFunc:Disconnect()
+    end
+    TP_WALK_SPEED = math.clamp(speed, MIN_TP_WALK_SPEED, MAX_TP_WALK_SPEED)
+    TPLoopFunc = RunService.RenderStepped:Connect(function()
+        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+            return
+        end
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if humanoid.MoveDirection.Magnitude > 0 then
+            rootPart.CFrame = rootPart.CFrame + humanoid.MoveDirection * TP_WALK_SPEED
+        end
+    end)
+    notify('Teleport Walk Enabled', 'Teleport walk speed set to ' .. TP_WALK_SPEED)
+end
+
+local function disableTpWalk()
+    if TPLoopFunc then
+        TPLoopFunc:Disconnect()
+        TPLoopFunc = nil
+        notify('Teleport Walk Disabled')
+    end
+end
+
+------------------------------------------------------------------
+-- ANTI-FLING SECTION
+------------------------------------------------------------------
+local function enableAntiFling()
+    if antiflingConn then
+        antiflingConn:Disconnect()
+    end
+    antiflingConn = RunService.Stepped:Connect(function()
+        local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            local vel = rootPart.Velocity
+            if vel.Magnitude > 100 then
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end)
+    notify('Anti-Fling Enabled')
+end
+
+local function disableAntiFling()
+    if antiflingConn then
+        antiflingConn:Disconnect()
+        antiflingConn = nil
+        notify('Anti-Fling Disabled')
+    end
+end
+
+------------------------------------------------------------------
+-- GUI SETUP
 ------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LockOnGui"
@@ -117,10 +416,10 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 350)  -- เพิ่มความกว้างและความสูงเพื่อรองรับปุ่มและช่อง
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)  -- ตำแหน่งตรงกลางจอ
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)  -- Anchor ที่ตรงกลาง
-MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- สีดำ
+MainFrame.Size = UDim2.new(0, 240, 0, 630)  -- Increased height to accommodate new button
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 MainFrame.BackgroundTransparency = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
@@ -130,7 +429,7 @@ UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(50, 50, 50)  -- เส้นขอบเทาเข้ม
+UIStroke.Color = Color3.fromRGB(50, 50, 50)
 UIStroke.Transparency = 0
 UIStroke.Thickness = 1
 UIStroke.Parent = MainFrame
@@ -138,7 +437,7 @@ UIStroke.Parent = MainFrame
 local DragBar = Instance.new("Frame")
 DragBar.Size = UDim2.new(1, 0, 0, 20)
 DragBar.Position = UDim2.new(0, 0, 0, 0)
-DragBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)  -- เทาเข้ม
+DragBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 DragBar.Active = true
 DragBar.Parent = MainFrame
 
@@ -173,8 +472,8 @@ UICornerMin.Parent = MinimizeButton
 
 local MiniButton = Instance.new("TextButton")
 MiniButton.Size = UDim2.new(0, 30, 0, 30)
-MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)  -- ตำแหน่งตรงกลางเมื่อมินิไทซ์
-MiniButton.AnchorPoint = Vector2.new(0.5, 0.5)
+MiniButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+MiniButton.AnchorPoint = Vector2.new(0, 0)
 MiniButton.Text = "☰"
 MiniButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MiniButton.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -187,7 +486,17 @@ local UICornerMini = Instance.new("UICorner")
 UICornerMini.CornerRadius = UDim.new(0, 8)
 UICornerMini.Parent = MiniButton
 
--- ปุ่มหลัก (เว้นระยะห่างสม่ำเสมอ)
+-- Center initial positions
+task.spawn(function()
+    while not workspace.CurrentCamera do
+        task.wait()
+    end
+    local viewport = workspace.CurrentCamera.ViewportSize
+    MainFrame.Position = UDim2.new(0, (viewport.X - 240)/2, 0, (viewport.Y - 630)/2)
+    MiniButton.Position = UDim2.new(0, (viewport.X - 30)/2, 0, (viewport.Y - 30)/2)
+end)
+
+-- ปุ่มหลัก
 local ToggleAutoLock = Instance.new("TextButton")
 ToggleAutoLock.Size = UDim2.new(0, 200, 0, 24)
 ToggleAutoLock.Position = UDim2.new(0, 20, 0, 30)
@@ -202,23 +511,9 @@ local UICornerLock = Instance.new("UICorner")
 UICornerLock.CornerRadius = UDim.new(0, 6)
 UICornerLock.Parent = ToggleAutoLock
 
-local ToggleAutoFire = Instance.new("TextButton")
-ToggleAutoFire.Size = UDim2.new(0, 200, 0, 24)
-ToggleAutoFire.Position = UDim2.new(0, 20, 0, 60)
-ToggleAutoFire.Text = "Auto-Fire: OFF"
-ToggleAutoFire.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-ToggleAutoFire.TextColor3 = Color3.fromRGB(200, 200, 200)
-ToggleAutoFire.Font = Enum.Font.GothamSemibold
-ToggleAutoFire.TextSize = 12
-ToggleAutoFire.Parent = MainFrame
-
-local UICornerFire = Instance.new("UICorner")
-UICornerFire.CornerRadius = UDim.new(0, 6)
-UICornerFire.Parent = ToggleAutoFire
-
 local ToggleTeamCheck = Instance.new("TextButton")
 ToggleTeamCheck.Size = UDim2.new(0, 200, 0, 24)
-ToggleTeamCheck.Position = UDim2.new(0, 20, 0, 90)
+ToggleTeamCheck.Position = UDim2.new(0, 20, 0, 60)
 ToggleTeamCheck.Text = "Team Check: ON"
 ToggleTeamCheck.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
 ToggleTeamCheck.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -232,7 +527,7 @@ UICornerTeam.Parent = ToggleTeamCheck
 
 local ResetHitboxButton = Instance.new("TextButton")
 ResetHitboxButton.Size = UDim2.new(0, 200, 0, 24)
-ResetHitboxButton.Position = UDim2.new(0, 20, 0, 120)
+ResetHitboxButton.Position = UDim2.new(0, 20, 0, 90)
 ResetHitboxButton.Text = "Reset Hitboxes"
 ResetHitboxButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 ResetHitboxButton.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -244,11 +539,123 @@ local UICornerReset = Instance.new("UICorner")
 UICornerReset.CornerRadius = UDim.new(0, 6)
 UICornerReset.Parent = ResetHitboxButton
 
--- Container สำหรับปุ่ม G I F S (กรอบสีขาวกับเส้นขอบดำ เอาสีขาวออก)
+local ToggleInfJump = Instance.new("TextButton")
+ToggleInfJump.Size = UDim2.new(0, 200, 0, 24)
+ToggleInfJump.Position = UDim2.new(0, 20, 0, 120)
+ToggleInfJump.Text = "Infinite Jump: OFF"
+ToggleInfJump.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleInfJump.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleInfJump.Font = Enum.Font.GothamSemibold
+ToggleInfJump.TextSize = 12
+ToggleInfJump.Parent = MainFrame
+
+local UICornerInfJump = Instance.new("UICorner")
+UICornerInfJump.CornerRadius = UDim.new(0, 6)
+UICornerInfJump.Parent = ToggleInfJump
+
+local ToggleTpWalk = Instance.new("TextButton")
+ToggleTpWalk.Size = UDim2.new(0, 200, 0, 24)
+ToggleTpWalk.Position = UDim2.new(0, 20, 0, 150)
+ToggleTpWalk.Text = "TpWalk: OFF"
+ToggleTpWalk.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleTpWalk.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleTpWalk.Font = Enum.Font.GothamSemibold
+ToggleTpWalk.TextSize = 12
+ToggleTpWalk.Parent = MainFrame
+
+local UICornerTpWalk = Instance.new("UICorner")
+UICornerTpWalk.CornerRadius = UDim.new(0, 6)
+UICornerTpWalk.Parent = ToggleTpWalk
+
+local ToggleESP = Instance.new("TextButton")
+ToggleESP.Size = UDim2.new(0, 200, 0, 24)
+ToggleESP.Position = UDim2.new(0, 20, 0, 180)
+ToggleESP.Text = "ESP Player: OFF"
+ToggleESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleESP.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleESP.Font = Enum.Font.GothamSemibold
+ToggleESP.TextSize = 12
+ToggleESP.Parent = MainFrame
+
+local UICornerESP = Instance.new("UICorner")
+UICornerESP.CornerRadius = UDim.new(0, 6)
+UICornerESP.Parent = ToggleESP
+
+local ToggleAntiAfk = Instance.new("TextButton")
+ToggleAntiAfk.Size = UDim2.new(0, 200, 0, 24)
+ToggleAntiAfk.Position = UDim2.new(0, 20, 0, 210)
+ToggleAntiAfk.Text = "Anti-AFK: ON"
+ToggleAntiAfk.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+ToggleAntiAfk.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleAntiAfk.Font = Enum.Font.GothamSemibold
+ToggleAntiAfk.TextSize = 12
+ToggleAntiAfk.Parent = MainFrame
+
+local UICornerAntiAfk = Instance.new("UICorner")
+UICornerAntiAfk.CornerRadius = UDim.new(0, 6)
+UICornerAntiAfk.Parent = ToggleAntiAfk
+
+local ToggleAntiFling = Instance.new("TextButton")
+ToggleAntiFling.Size = UDim2.new(0, 200, 0, 24)
+ToggleAntiFling.Position = UDim2.new(0, 20, 0, 240)
+ToggleAntiFling.Text = "Anti-Fling: OFF"
+ToggleAntiFling.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleAntiFling.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleAntiFling.Font = Enum.Font.GothamSemibold
+ToggleAntiFling.TextSize = 12
+ToggleAntiFling.Parent = MainFrame
+
+local UICornerAntiFling = Instance.new("UICorner")
+UICornerAntiFling.CornerRadius = UDim.new(0, 6)
+UICornerAntiFling.Parent = ToggleAntiFling
+
+local ToggleNoclip = Instance.new("TextButton")
+ToggleNoclip.Size = UDim2.new(0, 200, 0, 24)
+ToggleNoclip.Position = UDim2.new(0, 20, 0, 270)
+ToggleNoclip.Text = "Noclip: OFF"
+ToggleNoclip.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleNoclip.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleNoclip.Font = Enum.Font.GothamSemibold
+ToggleNoclip.TextSize = 12
+ToggleNoclip.Parent = MainFrame
+
+local UICornerNoclip = Instance.new("UICorner")
+UICornerNoclip.CornerRadius = UDim.new(0, 6)
+UICornerNoclip.Parent = ToggleNoclip
+
+local ToggleFloat = Instance.new("TextButton")
+ToggleFloat.Size = UDim2.new(0, 200, 0, 24)
+ToggleFloat.Position = UDim2.new(0, 20, 0, 300)
+ToggleFloat.Text = "Float: OFF"
+ToggleFloat.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleFloat.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleFloat.Font = Enum.Font.GothamSemibold
+ToggleFloat.TextSize = 12
+ToggleFloat.Parent = MainFrame
+
+local UICornerFloat = Instance.new("UICorner")
+UICornerFloat.CornerRadius = UDim.new(0, 6)
+UICornerFloat.Parent = ToggleFloat
+
+local EnableShiftLockButton = Instance.new("TextButton")
+EnableShiftLockButton.Size = UDim2.new(0, 200, 0, 24)
+EnableShiftLockButton.Position = UDim2.new(0, 20, 0, 330)
+EnableShiftLockButton.Text = "Enable Shift Lock"
+EnableShiftLockButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+EnableShiftLockButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+EnableShiftLockButton.Font = Enum.Font.GothamSemibold
+EnableShiftLockButton.TextSize = 12
+EnableShiftLockButton.Parent = MainFrame
+
+local UICornerEnableSL = Instance.new("UICorner")
+UICornerEnableSL.CornerRadius = UDim.new(0, 6)
+UICornerEnableSL.Parent = EnableShiftLockButton
+
+-- Container สำหรับปุ่ม G I F S
 local ButtonContainer = Instance.new("Frame")
 ButtonContainer.Size = UDim2.new(0, 200, 0, 24)
-ButtonContainer.Position = UDim2.new(0, 20, 0, 150)
-ButtonContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- เปลี่ยนเป็นสีดำแทนสีขาว
+ButtonContainer.Position = UDim2.new(0, 20, 0, 360)
+ButtonContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 ButtonContainer.Parent = MainFrame
 
 local UICornerContainer = Instance.new("UICorner")
@@ -256,17 +663,16 @@ UICornerContainer.CornerRadius = UDim.new(0, 6)
 UICornerContainer.Parent = ButtonContainer
 
 local UIStrokeContainer = Instance.new("UIStroke")
-UIStrokeContainer.Color = Color3.fromRGB(0, 0, 0)  -- เส้นขอบดำ
+UIStrokeContainer.Color = Color3.fromRGB(0, 0, 0)
 UIStrokeContainer.Thickness = 1
 UIStrokeContainer.Parent = ButtonContainer
 
--- ปุ่ม G I F S (เรียงแนวนอน ด้านล่างปุ่มหลัก กับสีใหม่: ดำ, และตัวอักษรสีขาวเต็ม)
-local LoadPasteWareButton = Instance.new("TextButton")  -- G (ดำ)
+local LoadPasteWareButton = Instance.new("TextButton")
 LoadPasteWareButton.Size = UDim2.new(0, 40, 0, 24)
 LoadPasteWareButton.Position = UDim2.new(0, 0, 0, 0)
 LoadPasteWareButton.Text = "G"
-LoadPasteWareButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadPasteWareButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
+LoadPasteWareButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadPasteWareButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadPasteWareButton.Font = Enum.Font.GothamSemibold
 LoadPasteWareButton.TextSize = 12
 LoadPasteWareButton.Parent = ButtonContainer
@@ -275,12 +681,12 @@ local UICornerPasteWare = Instance.new("UICorner")
 UICornerPasteWare.CornerRadius = UDim.new(0, 6)
 UICornerPasteWare.Parent = LoadPasteWareButton
 
-local LoadInvisibleScriptButton = Instance.new("TextButton")  -- I (ดำ)
+local LoadInvisibleScriptButton = Instance.new("TextButton")
 LoadInvisibleScriptButton.Size = UDim2.new(0, 40, 0, 24)
 LoadInvisibleScriptButton.Position = UDim2.new(0, 50, 0, 0)
 LoadInvisibleScriptButton.Text = "I"
-LoadInvisibleScriptButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadInvisibleScriptButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
+LoadInvisibleScriptButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadInvisibleScriptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadInvisibleScriptButton.Font = Enum.Font.GothamSemibold
 LoadInvisibleScriptButton.TextSize = 12
 LoadInvisibleScriptButton.Parent = ButtonContainer
@@ -289,12 +695,12 @@ local UICornerInvisible = Instance.new("UICorner")
 UICornerInvisible.CornerRadius = UDim.new(0, 6)
 UICornerInvisible.Parent = LoadInvisibleScriptButton
 
-local LoadInfiniteYieldButton = Instance.new("TextButton")  -- F (ดำ)
+local LoadInfiniteYieldButton = Instance.new("TextButton")
 LoadInfiniteYieldButton.Size = UDim2.new(0, 40, 0, 24)
 LoadInfiniteYieldButton.Position = UDim2.new(0, 100, 0, 0)
 LoadInfiniteYieldButton.Text = "F"
-LoadInfiniteYieldButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadInfiniteYieldButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
+LoadInfiniteYieldButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadInfiniteYieldButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadInfiniteYieldButton.Font = Enum.Font.GothamSemibold
 LoadInfiniteYieldButton.TextSize = 12
 LoadInfiniteYieldButton.Parent = ButtonContainer
@@ -303,12 +709,12 @@ local UICornerInfinite = Instance.new("UICorner")
 UICornerInfinite.CornerRadius = UDim.new(0, 6)
 UICornerInfinite.Parent = LoadInfiniteYieldButton
 
-local LoadStandButton = Instance.new("TextButton")  -- S (ดำ)
+local LoadStandButton = Instance.new("TextButton")
 LoadStandButton.Size = UDim2.new(0, 40, 0, 24)
 LoadStandButton.Position = UDim2.new(0, 150, 0, 0)
 LoadStandButton.Text = "S"
-LoadStandButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- ดำ
-LoadStandButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- ขาว
+LoadStandButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadStandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadStandButton.Font = Enum.Font.GothamSemibold
 LoadStandButton.TextSize = 12
 LoadStandButton.Parent = ButtonContainer
@@ -317,10 +723,9 @@ local UICornerStand = Instance.new("UICorner")
 UICornerStand.CornerRadius = UDim.new(0, 6)
 UICornerStand.Parent = LoadStandButton
 
--- ช่อง input (ปรับตำแหน่งให้ต่ำลงเพื่อเว้นที่ให้ปุ่ม G I F S)
 local distanceLabel = Instance.new("TextLabel")
 distanceLabel.Size = UDim2.new(0, 80, 0, 20)
-distanceLabel.Position = UDim2.new(0, 20, 0, 180)
+distanceLabel.Position = UDim2.new(0, 20, 0, 390)
 distanceLabel.BackgroundTransparency = 1
 distanceLabel.Text = "Lock Distance:"
 distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -331,7 +736,7 @@ distanceLabel.Parent = MainFrame
 
 local distanceBox = Instance.new("TextBox")
 distanceBox.Size = UDim2.new(0, 80, 0, 20)
-distanceBox.Position = UDim2.new(0, 100, 0, 180)
+distanceBox.Position = UDim2.new(0, 100, 0, 390)
 distanceBox.Text = tostring(LOCK_DISTANCE)
 distanceBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 distanceBox.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -340,66 +745,223 @@ distanceBox.TextSize = 10
 distanceBox.ClearTextOnFocus = false
 distanceBox.Parent = MainFrame
 
-local UICornerDist = Instance.new("UICorner")
-UICornerDist.CornerRadius = UDim.new(0, 4)
-UICornerDist.Parent = distanceBox
+local UICornerDistance = Instance.new("UICorner")
+UICornerDistance.CornerRadius = UDim.new(0, 4)
+UICornerDistance.Parent = distanceBox
 
-local headSizeLabel = Instance.new("TextLabel")
-headSizeLabel.Size = UDim2.new(0, 80, 0, 20)
-headSizeLabel.Position = UDim2.new(0, 20, 0, 205)
-headSizeLabel.BackgroundTransparency = 1
-headSizeLabel.Text = "Head Hitbox:"
-headSizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-headSizeLabel.Font = Enum.Font.GothamSemibold
-headSizeLabel.TextSize = 10
-headSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
-headSizeLabel.Parent = MainFrame
+local espDistanceLabel = Instance.new("TextLabel")
+espDistanceLabel.Size = UDim2.new(0, 80, 0, 20)
+espDistanceLabel.Position = UDim2.new(0, 20, 0, 415)
+espDistanceLabel.BackgroundTransparency = 1
+espDistanceLabel.Text = "ESP Distance:"
+espDistanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+espDistanceLabel.Font = Enum.Font.GothamSemibold
+espDistanceLabel.TextSize = 10
+espDistanceLabel.TextXAlignment = Enum.TextXAlignment.Left
+espDistanceLabel.Parent = MainFrame
 
-local headSizeBox = Instance.new("TextBox")
-headSizeBox.Size = UDim2.new(0, 80, 0, 20)
-headSizeBox.Position = UDim2.new(0, 100, 0, 205)
-headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
-headSizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-headSizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-headSizeBox.Font = Enum.Font.Gotham
-headSizeBox.TextSize = 10
-headSizeBox.ClearTextOnFocus = false
-headSizeBox.Parent = MainFrame
+local espDistanceBox = Instance.new("TextBox")
+espDistanceBox.Size = UDim2.new(0, 80, 0, 20)
+espDistanceBox.Position = UDim2.new(0, 100, 0, 415)
+espDistanceBox.Text = tostring(ESP_MAX_DISTANCE)
+espDistanceBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+espDistanceBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+espDistanceBox.Font = Enum.Font.Gotham
+espDistanceBox.TextSize = 10
+espDistanceBox.ClearTextOnFocus = false
+espDistanceBox.Parent = MainFrame
 
-local UICornerHead = Instance.new("UICorner")
-UICornerHead.CornerRadius = UDim.new(0, 4)
-UICornerHead.Parent = headSizeBox
+local UICornerEspDistance = Instance.new("UICorner")
+UICornerEspDistance.CornerRadius = UDim.new(0, 4)
+UICornerEspDistance.Parent = espDistanceBox
 
-local bodySizeLabel = Instance.new("TextLabel")
-bodySizeLabel.Size = UDim2.new(0, 80, 0, 20)
-bodySizeLabel.Position = UDim2.new(0, 20, 0, 230)
-bodySizeLabel.BackgroundTransparency = 1
-bodySizeLabel.Text = "Body Hitbox:"
-bodySizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-bodySizeLabel.Font = Enum.Font.GothamSemibold
-bodySizeLabel.TextSize = 10
-bodySizeLabel.TextXAlignment = Enum.TextXAlignment.Left
-bodySizeLabel.Parent = MainFrame
+local tpWalkSpeedLabel = Instance.new("TextLabel")
+tpWalkSpeedLabel.Size = UDim2.new(0, 80, 0, 20)
+tpWalkSpeedLabel.Position = UDim2.new(0, 20, 0, 440)
+tpWalkSpeedLabel.BackgroundTransparency = 1
+tpWalkSpeedLabel.Text = "TpWalk Speed:"
+tpWalkSpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+tpWalkSpeedLabel.Font = Enum.Font.GothamSemibold
+tpWalkSpeedLabel.TextSize = 10
+tpWalkSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+tpWalkSpeedLabel.Parent = MainFrame
 
-local bodySizeBox = Instance.new("TextBox")
-bodySizeBox.Size = UDim2.new(0, 80, 0, 20)
-bodySizeBox.Position = UDim2.new(0, 100, 0, 230)
-bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
-bodySizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-bodySizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
-bodySizeBox.Font = Enum.Font.Gotham
-bodySizeBox.TextSize = 10
-bodySizeBox.ClearTextOnFocus = false
-bodySizeBox.Parent = MainFrame
+local tpWalkSpeedBox = Instance.new("TextBox")
+tpWalkSpeedBox.Size = UDim2.new(0, 80, 0, 20)
+tpWalkSpeedBox.Position = UDim2.new(0, 100, 0, 440)
+tpWalkSpeedBox.Text = tostring(TP_WALK_SPEED)
+tpWalkSpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tpWalkSpeedBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+tpWalkSpeedBox.Font = Enum.Font.Gotham
+tpWalkSpeedBox.TextSize = 10
+tpWalkSpeedBox.ClearTextOnFocus = false
+tpWalkSpeedBox.Parent = MainFrame
 
-local UICornerBody = Instance.new("UICorner")
-UICornerBody.CornerRadius = UDim.new(0, 4)
-UICornerBody.Parent = bodySizeBox
+local UICornerTpSpeed = Instance.new("UICorner")
+UICornerTpSpeed.CornerRadius = UDim.new(0, 4)
+UICornerTpSpeed.Parent = tpWalkSpeedBox
 
--- Label ล่างสุด (Locking)
+local globalHeadSizeLabel = Instance.new("TextLabel")
+globalHeadSizeLabel.Size = UDim2.new(0, 80, 0, 20)
+globalHeadSizeLabel.Position = UDim2.new(0, 20, 0, 465)
+globalHeadSizeLabel.BackgroundTransparency = 1
+globalHeadSizeLabel.Text = "Global Head:"
+globalHeadSizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+globalHeadSizeLabel.Font = Enum.Font.GothamSemibold
+globalHeadSizeLabel.TextSize = 10
+globalHeadSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+globalHeadSizeLabel.Parent = MainFrame
+
+local globalHeadSizeBox = Instance.new("TextBox")
+globalHeadSizeBox.Size = UDim2.new(0, 80, 0, 20)
+globalHeadSizeBox.Position = UDim2.new(0, 100, 0, 465)
+globalHeadSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+globalHeadSizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+globalHeadSizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+globalHeadSizeBox.Font = Enum.Font.Gotham
+globalHeadSizeBox.TextSize = 10
+globalHeadSizeBox.ClearTextOnFocus = false
+globalHeadSizeBox.Parent = MainFrame
+
+local UICornerGlobalHead = Instance.new("UICorner")
+UICornerGlobalHead.CornerRadius = UDim.new(0, 4)
+UICornerGlobalHead.Parent = globalHeadSizeBox
+
+local globalBodySizeLabel = Instance.new("TextLabel")
+globalBodySizeLabel.Size = UDim2.new(0, 80, 0, 20)
+globalBodySizeLabel.Position = UDim2.new(0, 20, 0, 490)
+globalBodySizeLabel.BackgroundTransparency = 1
+globalBodySizeLabel.Text = "Global Body:"
+globalBodySizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+globalBodySizeLabel.Font = Enum.Font.GothamSemibold
+globalBodySizeLabel.TextSize = 10
+globalBodySizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+globalBodySizeLabel.Parent = MainFrame
+
+local globalBodySizeBox = Instance.new("TextBox")
+globalBodySizeBox.Size = UDim2.new(0, 80, 0, 20)
+globalBodySizeBox.Position = UDim2.new(0, 100, 0, 490)
+globalBodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+globalBodySizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+globalBodySizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+globalBodySizeBox.Font = Enum.Font.Gotham
+globalBodySizeBox.TextSize = 10
+globalBodySizeBox.ClearTextOnFocus = false
+globalBodySizeBox.Parent = MainFrame
+
+local UICornerGlobalBody = Instance.new("UICorner")
+UICornerGlobalBody.CornerRadius = UDim.new(0, 4)
+UICornerGlobalBody.Parent = globalBodySizeBox
+
+local playerNameLabel = Instance.new("TextLabel")
+playerNameLabel.Size = UDim2.new(0, 80, 0, 20)
+playerNameLabel.Position = UDim2.new(0, 20, 0, 515)
+playerNameLabel.BackgroundTransparency = 1
+playerNameLabel.Text = "Target Player:"
+playerNameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+playerNameLabel.Font = Enum.Font.GothamSemibold
+playerNameLabel.TextSize = 10
+playerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerNameLabel.Parent = MainFrame
+
+local playerNameBox = Instance.new("TextBox")
+playerNameBox.Size = UDim2.new(0, 80, 0, 20)
+playerNameBox.Position = UDim2.new(0, 100, 0, 515)
+playerNameBox.Text = ""
+playerNameBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+playerNameBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+playerNameBox.Font = Enum.Font.Gotham
+playerNameBox.TextSize = 10
+playerNameBox.ClearTextOnFocus = true
+playerNameBox.Parent = MainFrame
+
+local UICornerPlayerName = Instance.new("UICorner")
+UICornerPlayerName.CornerRadius = UDim.new(0, 4)
+UICornerPlayerName.Parent = playerNameBox
+
+local specificHeadSizeLabel = Instance.new("TextLabel")
+specificHeadSizeLabel.Size = UDim2.new(0, 80, 0, 20)
+specificHeadSizeLabel.Position = UDim2.new(0, 20, 0, 540)
+specificHeadSizeLabel.BackgroundTransparency = 1
+specificHeadSizeLabel.Text = "Specific Head:"
+specificHeadSizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+specificHeadSizeLabel.Font = Enum.Font.GothamSemibold
+specificHeadSizeLabel.TextSize = 10
+specificHeadSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+specificHeadSizeLabel.Parent = MainFrame
+
+local specificHeadSizeBox = Instance.new("TextBox")
+specificHeadSizeBox.Size = UDim2.new(0, 80, 0, 20)
+specificHeadSizeBox.Position = UDim2.new(0, 100, 0, 540)
+specificHeadSizeBox.Text = ""
+specificHeadSizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+specificHeadSizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+specificHeadSizeBox.Font = Enum.Font.Gotham
+specificHeadSizeBox.TextSize = 10
+specificHeadSizeBox.ClearTextOnFocus = false
+specificHeadSizeBox.Parent = MainFrame
+
+local UICornerSpecificHead = Instance.new("UICorner")
+UICornerSpecificHead.CornerRadius = UDim.new(0, 4)
+UICornerSpecificHead.Parent = specificHeadSizeBox
+
+local specificBodySizeLabel = Instance.new("TextLabel")
+specificBodySizeLabel.Size = UDim2.new(0, 80, 0, 20)
+specificBodySizeLabel.Position = UDim2.new(0, 20, 0, 565)
+specificBodySizeLabel.BackgroundTransparency = 1
+specificBodySizeLabel.Text = "Specific Body:"
+specificBodySizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+specificBodySizeLabel.Font = Enum.Font.GothamSemibold
+specificBodySizeLabel.TextSize = 10
+specificBodySizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+specificBodySizeLabel.Parent = MainFrame
+
+local specificBodySizeBox = Instance.new("TextBox")
+specificBodySizeBox.Size = UDim2.new(0, 80, 0, 20)
+specificBodySizeBox.Position = UDim2.new(0, 100, 0, 565)
+specificBodySizeBox.Text = ""
+specificBodySizeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+specificBodySizeBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+specificBodySizeBox.Font = Enum.Font.Gotham
+specificBodySizeBox.TextSize = 10
+specificBodySizeBox.ClearTextOnFocus = false
+specificBodySizeBox.Parent = MainFrame
+
+local UICornerSpecificBody = Instance.new("UICorner")
+UICornerSpecificBody.CornerRadius = UDim.new(0, 4)
+UICornerSpecificBody.Parent = specificBodySizeBox
+
+local TeleportButton = Instance.new("TextButton")
+TeleportButton.Size = UDim2.new(0, 200, 0, 24)
+TeleportButton.Position = UDim2.new(0, 20, 0, 590)
+TeleportButton.Text = "Teleport to Player"
+TeleportButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TeleportButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+TeleportButton.Font = Enum.Font.GothamSemibold
+TeleportButton.TextSize = 12
+TeleportButton.Parent = MainFrame
+
+local UICornerTeleport = Instance.new("UICorner")
+UICornerTeleport.CornerRadius = UDim.new(0, 6)
+UICornerTeleport.Parent = TeleportButton
+
+local GrabToolsButton = Instance.new("TextButton")
+GrabToolsButton.Size = UDim2.new(0, 200, 0, 24)
+GrabToolsButton.Position = UDim2.new(0, 20, 0, 620)
+GrabToolsButton.Text = "Grab Tools"
+GrabToolsButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+GrabToolsButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+GrabToolsButton.Font = Enum.Font.GothamSemibold
+GrabToolsButton.TextSize = 12
+GrabToolsButton.Parent = MainFrame
+
+local UICornerGrabTools = Instance.new("UICorner")
+UICornerGrabTools.CornerRadius = UDim.new(0, 6)
+UICornerGrabTools.Parent = GrabToolsButton
+
 local label = Instance.new("TextLabel")
 label.Size = UDim2.new(1, -40, 0, 20)
-label.Position = UDim2.new(0, 20, 0, 260)
+label.Position = UDim2.new(0, 20, 0, 650)
 label.Text = "Locking: -"
 label.TextColor3 = Color3.fromRGB(200, 200, 200)
 label.BackgroundTransparency = 1
@@ -413,13 +975,11 @@ label.Parent = MainFrame
 -- LOGIC SECTION
 ------------------------------------------------------------------
 local autoLockEnabled = false
-local autoFireEnabled = false
 local teamCheckEnabled = true
 local target = nil
-local FIRE_COOLDOWN = 0.15
-
 local lastTargetHumanoid = nil
 local lastTarget = nil
+local floatEnabled = false
 
 local function showKillPopup()
     local popup = Instance.new("TextLabel")
@@ -470,39 +1030,10 @@ local function getFrontFacingTarget()
     return best
 end
 
-local function moveCameraBehindTarget(target, zoomDistance)
-    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
-    local cam = workspace.CurrentCamera
-    local hrp = target.Character.HumanoidRootPart
-    local forward = hrp.CFrame.LookVector
-    local camOffset = -forward * zoomDistance
-    local camPos = hrp.Position + camOffset + Vector3.new(0, 2, 0)
-    local lookAt = hrp.Position + Vector3.new(0, 2, 0)
-    cam.CFrame = CFrame.new(camPos, lookAt)
-end
-
-local function fire()
-    local shootRemote = ReplicatedStorage:FindFirstChild("Shoot")
-    if shootRemote and shootRemote:IsA("RemoteEvent") then
-        shootRemote:FireServer()
-    else
-        local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-        if tool then
-            tool:Activate()
-        end
-    end
-end
-
 ToggleAutoLock.MouseButton1Click:Connect(function()
     autoLockEnabled = not autoLockEnabled
     ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
     ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
-end)
-
-ToggleAutoFire.MouseButton1Click:Connect(function()
-    autoFireEnabled = not autoFireEnabled
-    ToggleAutoFire.Text = "Auto-Fire: " .. (autoFireEnabled and "ON" or "OFF")
-    ToggleAutoFire.BackgroundColor3 = autoFireEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
 end)
 
 ToggleTeamCheck.MouseButton1Click:Connect(function()
@@ -515,21 +1046,103 @@ ResetHitboxButton.MouseButton1Click:Connect(function()
     resetAllHitboxes()
 end)
 
+ToggleInfJump.MouseButton1Click:Connect(function()
+    infJumpEnabled = not infJumpEnabled
+    ToggleInfJump.Text = "Infinite Jump: " .. (infJumpEnabled and "ON" or "OFF")
+    ToggleInfJump.BackgroundColor3 = infJumpEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+end)
+
+ToggleTpWalk.MouseButton1Click:Connect(function()
+    tpWalkEnabled = not tpWalkEnabled
+    ToggleTpWalk.Text = "TpWalk: " .. (tpWalkEnabled and "ON" or "OFF")
+    ToggleTpWalk.BackgroundColor3 = tpWalkEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    if tpWalkEnabled then
+        enableTpWalk(TP_WALK_SPEED)
+    else
+        disableTpWalk()
+    end
+end)
+
+ToggleESP.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    ToggleESP.Text = "ESP Player: " .. (espEnabled and "ON" or "OFF")
+    ToggleESP.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    toggleESP(espEnabled)
+end)
+
+ToggleAntiAfk.MouseButton1Click:Connect(function()
+    antiAfkEnabled = not antiAfkEnabled
+    ToggleAntiAfk.Text = "Anti-AFK: " .. (antiAfkEnabled and "ON" or "OFF")
+    ToggleAntiAfk.BackgroundColor3 = antiAfkEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    if antiAfkEnabled then
+        notify("Anti-AFK Enabled", "Anti-AFK system activated, running every 20 minutes")
+    else
+        notify("Anti-AFK Disabled", "Anti-AFK system deactivated")
+    end
+end)
+
+ToggleAntiFling.MouseButton1Click:Connect(function()
+    antiFlingEnabled = not antiFlingEnabled
+    ToggleAntiFling.Text = "Anti-Fling: " .. (antiFlingEnabled and "ON" or "OFF")
+    ToggleAntiFling.BackgroundColor3 = antiFlingEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    if antiFlingEnabled then
+        enableAntiFling()
+    else
+        disableAntiFling()
+    end
+end)
+
+ToggleNoclip.MouseButton1Click:Connect(function()
+    noclipEnabled = not noclipEnabled
+    ToggleNoclip.Text = "Noclip: " .. (noclipEnabled and "ON" or "OFF")
+    ToggleNoclip.BackgroundColor3 = noclipEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    if noclipEnabled then
+        enableNoclip()
+    else
+        disableNoclip()
+    end
+end)
+
+ToggleFloat.MouseButton1Click:Connect(function()
+    floatEnabled = not floatEnabled
+    ToggleFloat.Text = "Float: " .. (floatEnabled and "ON" or "OFF")
+    ToggleFloat.BackgroundColor3 = floatEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+    if floatEnabled then
+        float()
+    else
+        unfloat()
+    end
+end)
+
+EnableShiftLockButton.MouseButton1Click:Connect(function()
+    player.DevEnableMouseLock = true
+    notify('Shift Lock Enabled')
+end)
+
+GrabToolsButton.MouseButton1Click:Connect(function()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Tool") then
+            v.Parent = player.Backpack
+        end
+    end
+    notify('Grabbed Tools')
+end)
+
 LoadPasteWareButton.MouseButton1Click:Connect(function()
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/FakeAngles/PasteWare/refs/heads/main/PasteWare.lua"))()
     end)
     if success then
         game.StarterGui:SetCore("SendNotification", {
-            Title = "PasteWare Loaded";
-            Text = "Script loaded successfully!";
-            Duration = 3;
+            Title = "PasteWare Loaded",
+            Text = "Script loaded successfully!",
+            Duration = 3
         })
     else
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Error Loading PasteWare";
-            Text = tostring(err);
-            Duration = 5;
+            Title = "Error Loading PasteWare",
+            Text = tostring(err),
+            Duration = 5
         })
     end
 end)
@@ -540,15 +1153,15 @@ LoadInvisibleScriptButton.MouseButton1Click:Connect(function()
     end)
     if success then
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Invisible Script Loaded";
-            Text = "Script loaded successfully!";
-            Duration = 3;
+            Title = "Invisible Script Loaded",
+            Text = "Script loaded successfully!",
+            Duration = 3
         })
     else
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Error Loading Invisible Script";
-            Text = tostring(err);
-            Duration = 5;
+            Title = "Error Loading Invisible Script",
+            Text = tostring(err),
+            Duration = 5
         })
     end
 end)
@@ -559,15 +1172,15 @@ LoadInfiniteYieldButton.MouseButton1Click:Connect(function()
     end)
     if success then
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Infinite Yield Loaded";
-            Text = "Script loaded successfully!";
-            Duration = 3;
+            Title = "Infinite Yield Loaded",
+            Text = "Script loaded successfully!",
+            Duration = 3
         })
     else
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Error Loading Infinite Yield";
-            Text = tostring(err);
-            Duration = 5;
+            Title = "Error Loading Infinite Yield",
+            Text = tostring(err),
+            Duration = 5
         })
     end
 end)
@@ -578,60 +1191,57 @@ LoadStandButton.MouseButton1Click:Connect(function()
     end)
     if success then
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Stand Loaded";
-            Text = "Script loaded successfully!";
-            Duration = 3;
+            Title = "Stand Loaded",
+            Text = "Script loaded successfully!",
+            Duration = 3
         })
     else
         game.StarterGui:SetCore("SendNotification", {
-            Title = "Error Loading Stand";
-            Text = tostring(err);
-            Duration = 5;
+            Title = "Error Loading Stand",
+            Text = tostring(err),
+            Duration = 5
         })
+    end
+end)
+
+TeleportButton.MouseButton1Click:Connect(function()
+    local name = playerNameBox.Text
+    if name ~= "" then
+        local targetPlr = Players:FindFirstChild(name)
+        if targetPlr and targetPlr ~= player and targetPlr.Character and targetPlr.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = targetPlr.Character.HumanoidRootPart.CFrame + Vector3.new(0, 0, 5)
+        end
+    end
+end)
+
+espDistanceBox.FocusLost:Connect(function()
+    local val = tonumber(espDistanceBox.Text)
+    if val then
+        ESP_MAX_DISTANCE = math.max(val, 10)
+        espDistanceBox.Text = tostring(ESP_MAX_DISTANCE)
+        if espEnabled then
+            toggleESP(false)
+            toggleESP(true)
+        end
+    else
+        espDistanceBox.Text = tostring(ESP_MAX_DISTANCE)
     end
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.V then
-        autoLockEnabled = not autoLockEnabled
-        ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
-        ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel and autoLockEnabled and target then
-        if input.Position.Z > 0 then
-            ZOOM_DISTANCE = math.max(MIN_ZOOM, ZOOM_DISTANCE - ZOOM_STEP)
-        elseif input.Position.Z < 0 then
-            ZOOM_DISTANCE = math.min(MAX_ZOOM, ZOOM_DISTANCE + ZOOM_STEP)
+    if not processed then
+        if input.KeyCode == Enum.KeyCode.V then
+            autoLockEnabled = not autoLockEnabled
+            ToggleAutoLock.Text = "Auto-Lock: " .. (autoLockEnabled and "ON" or "OFF")
+            ToggleAutoLock.BackgroundColor3 = autoLockEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(40, 40, 40)
+        elseif input.KeyCode == Enum.KeyCode.Space and infJumpEnabled then
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
         end
     end
 end)
-
-local lastFire = 0
-local function tryAutoFire()
-    if autoFireEnabled and target then
-        local now = tick()
-        if now - lastFire > FIRE_COOLDOWN then
-            fire()
-            lastFire = now
-        end
-    end
-end
-
-if UserInputService.TouchEnabled then
-    UserInputService.TouchStarted:Connect(function(input, processed)
-        tryAutoFire()
-    end)
-else
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            tryAutoFire()
-        end
-    end)
-end
 
 distanceBox.FocusLost:Connect(function()
     local val = tonumber(distanceBox.Text)
@@ -642,33 +1252,103 @@ distanceBox.FocusLost:Connect(function()
         distanceBox.Text = tostring(LOCK_DISTANCE)
     end
 end)
-headSizeBox.FocusLost:Connect(function()
-    local val = tonumber(headSizeBox.Text)
+
+tpWalkSpeedBox.FocusLost:Connect(function()
+    local val = tonumber(tpWalkSpeedBox.Text)
     if val then
-        HEAD_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
-        headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
-        updateAllHitboxes()
+        TP_WALK_SPEED = math.clamp(val, MIN_TP_WALK_SPEED, MAX_TP_WALK_SPEED)
+        tpWalkSpeedBox.Text = tostring(TP_WALK_SPEED)
+        if tpWalkEnabled then
+            enableTpWalk(TP_WALK_SPEED)
+        end
     else
-        headSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+        tpWalkSpeedBox.Text = tostring(TP_WALK_SPEED)
     end
 end)
-bodySizeBox.FocusLost:Connect(function()
-    local val = tonumber(bodySizeBox.Text)
+
+globalHeadSizeBox.FocusLost:Connect(function()
+    local val = tonumber(globalHeadSizeBox.Text)
     if val then
-        BODY_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
-        bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+        HEAD_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+        globalHeadSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
         updateAllHitboxes()
     else
-        bodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+        globalHeadSizeBox.Text = tostring(HEAD_HITBOX_SIZE)
+    end
+end)
+
+globalBodySizeBox.FocusLost:Connect(function()
+    local val = tonumber(globalBodySizeBox.Text)
+    if val then
+        BODY_HITBOX_SIZE = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+        globalBodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+        updateAllHitboxes()
+    else
+        globalBodySizeBox.Text = tostring(BODY_HITBOX_SIZE)
+    end
+end)
+
+specificHeadSizeBox.FocusLost:Connect(function()
+    local val = tonumber(specificHeadSizeBox.Text)
+    local name = playerNameBox.Text
+    if val and name ~= "" then
+        local plr = Players:FindFirstChild(name)
+        if plr and plr ~= player and plr.Character then
+            customHeadSize[plr] = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+            local b = customBodySize[plr] or BODY_HITBOX_SIZE
+            setHitboxSizes(plr.Character, customHeadSize[plr], b)
+            specificHeadSizeBox.Text = tostring(customHeadSize[plr])
+        end
+    else
+        specificHeadSizeBox.Text = ""
+    end
+end)
+
+specificBodySizeBox.FocusLost:Connect(function()
+    local val = tonumber(specificBodySizeBox.Text)
+    local name = playerNameBox.Text
+    if val and name ~= "" then
+        local plr = Players:FindFirstChild(name)
+        if plr and plr ~= player and plr.Character then
+            customBodySize[plr] = math.clamp(val, 0.01, MAX_HITBOX_SIZE)
+            local h = customHeadSize[plr] or HEAD_HITBOX_SIZE
+            setHitboxSizes(plr.Character, h, customBodySize[plr])
+            specificBodySizeBox.Text = tostring(customBodySize[plr])
+        end
+    else
+        specificBodySizeBox.Text = ""
+    end
+end)
+
+playerNameBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local text = playerNameBox.Text:lower()
+    if #text == 0 then return end
+    local matches = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Name:lower():find("^" .. text) then
+            table.insert(matches, p.Name)
+        end
+    end
+    table.sort(matches)
+    if #matches >= 1 then
+        local suggestion = matches[1]
+        playerNameBox.Text = suggestion
+        playerNameBox.CursorPosition = #text + 1
     end
 end)
 
 MinimizeButton.MouseButton1Click:Connect(function()
+    local mainCenterX = MainFrame.Position.X.Offset + 120
+    local mainCenterY = MainFrame.Position.Y.Offset + 315
+    MiniButton.Position = UDim2.new(0, mainCenterX - 15, 0, mainCenterY - 15)
     MainFrame.Visible = false
     MiniButton.Visible = true
-    MiniButton.Position = MainFrame.Position
 end)
+
 MiniButton.MouseButton1Click:Connect(function()
+    local miniCenterX = MiniButton.Position.X.Offset + 15
+    local miniCenterY = MiniButton.Position.Y.Offset + 15
+    MainFrame.Position = UDim2.new(0, miniCenterX - 120, 0, miniCenterY - 315)
     MainFrame.Visible = true
     MiniButton.Visible = false
 end)
@@ -683,9 +1363,6 @@ do
             local newX = math.clamp(startPos.X + delta.X, 0, math.max(0, viewport.X - frameSize.X))
             local newY = math.clamp(startPos.Y + delta.Y, 0, math.max(0, viewport.Y - frameSize.Y))
             MainFrame.Position = UDim2.new(0, newX, 0, newY)
-            if MiniButton.Visible then
-                MiniButton.Position = MainFrame.Position
-            end
         end
     end
     DragBar.InputBegan:Connect(function(input)
@@ -712,10 +1389,49 @@ do
     end)
 end
 
+do
+    local draggingMini, dragInputMini, dragStartMini, startPosMini
+    local function updateMini(input)
+        if draggingMini then
+            local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920,1080)
+            local frameSize = MiniButton.AbsoluteSize
+            local delta = input.Position - dragStartMini
+            local newX = math.clamp(startPosMini.X + delta.X, 0, math.max(0, viewport.X - frameSize.X))
+            local newY = math.clamp(startPosMini.Y + delta.Y, 0, math.max(0, viewport.Y - frameSize.Y))
+            MiniButton.Position = UDim2.new(0, newX, 0, newY)
+        end
+    end
+    MiniButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingMini = true
+            dragStartMini = input.Position
+            startPosMini = MiniButton.AbsolutePosition
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingMini = false
+                end
+            end)
+        end
+    end)
+    MiniButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInputMini = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInputMini and draggingMini then
+            updateMini(input)
+        end
+    end)
+end
+
 task.spawn(function()
     while true do
         updateAllHitboxes()
-        task.wait(1)
+        if espEnabled then
+            updateESP()
+        end
+        task.wait(0.1)
     end
 end)
 
@@ -724,11 +1440,9 @@ RunService.RenderStepped:Connect(function()
         local newTarget = getFrontFacingTarget()
         if newTarget ~= target then
             target = newTarget
-            ZOOM_DISTANCE = 10
         end
         if target then
-            moveCameraBehindTarget(target, ZOOM_DISTANCE)
-            label.Text = "Locking: " .. target.Name .. " (Zoom: " .. ZOOM_DISTANCE .. "u)"
+            label.Text = "Locking: " .. target.Name
 
             local humanoid = target.Character and target.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
@@ -752,8 +1466,5 @@ RunService.RenderStepped:Connect(function()
         label.Text = "Locking: -"
         lastTarget = nil
         lastTargetHumanoid = nil
-    end
-    if autoFireEnabled then
-        tryAutoFire()
     end
 end)
