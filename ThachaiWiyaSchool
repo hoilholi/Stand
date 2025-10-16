@@ -1,598 +1,543 @@
--- Stand Power GUI (Mini, Transparent, +Foldable GUI, Stair-Step Layout)
--- ฟีเจอร์: AutoTP, Loop AutoTP (หลายจุด), Set Spawn, DiedTP, AntiIdle, Autoพิมพ์ !rejoin, Ctrl+Click Teleport
--- จัดเรียง GUI เป็นแนวขั้นบันไดอย่างสวยงาม ไม่เลยกรอบ, สลับตำแหน่ง AutoTP กับ Loop AutoTP, จัดปุ่มสีฟ้าให้ตรงกันแนวตรง
+-- Private Script for Roblox
+-- Features: Auto send "!rejoin" when damaged (no delay), Draggable & Foldable GUI, Set Spawn, Loop Auto TP (no delay, multi-points, clearable), Anti AFK (default ON), Click TP with mouse click only, Click TP Toggle Hotkey (default CapsLock), GUI Toggle with customizable hotkey (default Alt), Tooltip for all buttons
 
 local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "StandPowerGUI"
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
+local VirtualUser = game:GetService("VirtualUser")
+local gui = Instance.new("ScreenGui")
+gui.Name = "PrivateScriptGUI"
+gui.Parent = player:WaitForChild("PlayerGui", 5)
 gui.ResetOnSpawn = false
 
---------------------- Main Stand Power Frame (Mini, Transparent) ---------------------
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 280, 0, 320)  -- ปรับขนาดให้พอดีกับขั้นบันได ไม่ยาวเกิน
-frame.Position = UDim2.new(0, 40, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(26, 29, 36)
-frame.BackgroundTransparency = 0.3
+-- Main Frame (Draggable, Foldable)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 300)
+frame.Position = UDim2.new(0.5, -150, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.2
 frame.BorderSizePixel = 0
-local frameCorner = Instance.new("UICorner", frame)
-frameCorner.CornerRadius = UDim.new(0, 8)  -- ขอบมนสำหรับเฟรมหลัก
+frame.Parent = gui
+frame.Visible = true
 
--- Header: STAND POWER (จัดสองบรรทัด)
-local standLabel = Instance.new("TextLabel", frame)
-standLabel.Size = UDim2.new(1, 0, 0, 26)
-standLabel.Position = UDim2.new(0, 0, 0, 0)
-standLabel.BackgroundTransparency = 1
-standLabel.Font = Enum.Font.GothamBlack
-standLabel.TextSize = 20
-standLabel.TextColor3 = Color3.fromRGB(255, 215, 48)
-standLabel.TextStrokeTransparency = 0.7
-standLabel.TextStrokeColor3 = Color3.fromRGB(90, 60, 0)
-standLabel.Text = "STAND"
-standLabel.TextYAlignment = Enum.TextYAlignment.Top
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = frame
 
-local powerLabel = Instance.new("TextLabel", frame)
-powerLabel.Size = UDim2.new(1, 0, 0, 26)
-powerLabel.Position = UDim2.new(0, 0, 0, 21)
-powerLabel.BackgroundTransparency = 1
-powerLabel.Font = Enum.Font.GothamBlack
-powerLabel.TextSize = 20
-powerLabel.TextColor3 = Color3.fromRGB(170, 52, 255)
-powerLabel.TextStrokeTransparency = 0.7
-powerLabel.TextStrokeColor3 = Color3.fromRGB(60, 0, 90)
-powerLabel.Text = "POWER"
-powerLabel.TextYAlignment = Enum.TextYAlignment.Top
+-- Tooltip Creation Function
+local function createTooltip(parent, text, pos)
+    local tooltip = Instance.new("TextLabel")
+    tooltip.Size = UDim2.new(0, 200, 0, 20)
+    tooltip.Position = pos
+    tooltip.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    tooltip.BackgroundTransparency = 0.2
+    tooltip.Text = text
+    tooltip.Font = Enum.Font.Gotham
+    tooltip.TextSize = 12
+    tooltip.TextColor3 = Color3.new(1, 1, 1)
+    tooltip.Visible = false
+    tooltip.Parent = parent
+    local tooltipCorner = Instance.new("UICorner")
+    tooltipCorner.CornerRadius = UDim.new(0, 4)
+    tooltipCorner.Parent = tooltip
+    return tooltip
+end
 
--- ปุ่มพับ/กาง GUI (Minimize Button)
-local minimizeBtn = Instance.new("TextButton", frame)
-minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
-minimizeBtn.Position = UDim2.new(1, -25, 0, 3)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(47, 52, 65)
-minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+-- Minimize Button
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
+minimizeBtn.Position = UDim2.new(1, -30, 0, 5)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 minimizeBtn.Text = "-"
 minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.TextSize = 14
-minimizeBtn.BorderSizePixel = 0
-local minimizeCorner = Instance.new("UICorner", minimizeBtn)
-minimizeCorner.CornerRadius = UDim.new(0, 4)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Parent = frame
 
-local fullSize = UDim2.new(0, 280, 0, 320)
-local collapsedSize = UDim2.new(0, 280, 0, 26)
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 4)
+minCorner.Parent = minimizeBtn
+
+local minimizeTooltip = createTooltip(frame, "Minimizes or expands the GUI", UDim2.new(1, -230, 0, 35))
+minimizeBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        minimizeTooltip.Visible = true
+    end
+end)
+minimizeBtn.MouseLeave:Connect(function()
+    minimizeTooltip.Visible = false
+end)
+
+local fullSize = UDim2.new(0, 300, 0, 300)
+local collapsedSize = UDim2.new(0, 300, 0, 30)
 local collapsed = false
 minimizeBtn.MouseButton1Click:Connect(function()
     collapsed = not collapsed
     minimizeBtn.Text = collapsed and "+" or "-"
     frame.Size = collapsed and collapsedSize or fullSize
-    -- ซ่อน/แสดงเนื้อหาด้านล่าง header
     for _, child in ipairs(frame:GetChildren()) do
-        if child.Position.Y.Offset >= 50 and child ~= standLabel and child ~= powerLabel and child ~= minimizeBtn then
+        if (child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("Frame")) and child.Position.Y.Offset > 30 then
             child.Visible = not collapsed
         end
     end
 end)
 
--- Drag GUI
-local UserInputService = game:GetService("UserInputService")
-local function makeDraggable(target, ybar)
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-    target.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.Y - target.AbsolutePosition.Y < ybar then
-            dragging = true
-            dragStart = input.Position
-            startPos = target.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
-    target.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-makeDraggable(frame, 26)
+-- Title Label
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "Private Script"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Parent = frame
 
-local y0 = 50
-local rowH = 28  -- เพิ่มระยะห่างเพื่อความสวยงาม
-local leftX = 8
-local stepOffset = 10  -- Offset สำหรับขั้นบันได (เลื่อนขวาเพิ่มทีละ 10 ต่อแถว)
-local blueBtnX = leftX + 195  -- ตำแหน่ง X คงที่สำหรับปุ่มสีฟ้าเพื่อให้ตรงกันแนวตรง
-local function makeStatusCircle(parent, color, x, y)
-    local cir = Instance.new("Frame", parent)
-    cir.Size = UDim2.new(0, 12, 0, 12)
-    cir.Position = UDim2.new(0, leftX + x, 0, y + 8)
-    cir.BackgroundColor3 = color
-    cir.BorderSizePixel = 0
-    cir.Name = "StatusCircle"
-    local uicorner = Instance.new("UICorner", cir)
-    uicorner.CornerRadius = UDim.new(1, 0)
-    return cir
-end
-local statusColors = {
-    on = Color3.fromRGB(80,210,80),
-    off = Color3.fromRGB(210,50,50)
-}
-local darkbtn = Color3.fromRGB(47,52,65)
-local bluebtn = Color3.fromRGB(66,117,143)
-
-local function addButtonCorner(btn)
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 6)  -- ขอบมนสำหรับปุ่ม
-end
-
---- 1. Loop AutoTP (Multi) (ขั้นบันไดระดับ 0 - สลับตำแหน่ง)
-local loopautotpcircle = makeStatusCircle(frame, statusColors.off, 0 * stepOffset, y0)
-local loopautotpBtn = Instance.new("TextButton", frame)
-loopautotpBtn.Size = UDim2.new(0, 170, 0, 22)
-loopautotpBtn.Position = UDim2.new(0, leftX + 18 + 0 * stepOffset, 0, y0 + 1)
-loopautotpBtn.Text = "Loop AutoTP : ปิด"
-loopautotpBtn.Font = Enum.Font.GothamBold
-loopautotpBtn.TextSize = 13
-loopautotpBtn.BackgroundColor3 = darkbtn
-loopautotpBtn.TextColor3 = Color3.new(1,1,1)
-loopautotpBtn.BorderSizePixel = 0
-addButtonCorner(loopautotpBtn)
-local addLoopTPBtn = Instance.new("TextButton", frame)
-addLoopTPBtn.Size = UDim2.new(0, 70, 0, 22)
-addLoopTPBtn.Position = UDim2.new(0, blueBtnX, 0, y0 + 1)
-addLoopTPBtn.Text = "Add Point"
-addLoopTPBtn.Font = Enum.Font.GothamBold
-addLoopTPBtn.TextSize = 11
-addLoopTPBtn.BackgroundColor3 = bluebtn
-addLoopTPBtn.TextColor3 = Color3.new(1,1,1)
-addLoopTPBtn.BorderSizePixel = 0
-addButtonCorner(addLoopTPBtn)
-
---- 2. AutoTP (ขั้นบันไดระดับ 1 - สลับตำแหน่ง)
-local autotpcircle = makeStatusCircle(frame, statusColors.off, 1 * stepOffset, y0 + rowH)
-local autotpswitch = Instance.new("TextButton", frame)
-autotpswitch.Size = UDim2.new(0, 110, 0, 22)
-autotpswitch.Position = UDim2.new(0, leftX + 18 + 1 * stepOffset, 0, y0 + rowH + 1)
-autotpswitch.Text = "AutoTP : ปิด"
-autotpswitch.Font = Enum.Font.GothamBold
-autotpswitch.TextSize = 13
-autotpswitch.BackgroundColor3 = darkbtn
-autotpswitch.TextColor3 = Color3.new(1,1,1)
-autotpswitch.BorderSizePixel = 0
-addButtonCorner(autotpswitch)
-local autosetBtn = Instance.new("TextButton", frame)
-autosetBtn.Size = UDim2.new(0, 70, 0, 22)
-autosetBtn.Position = UDim2.new(0, blueBtnX, 0, y0 + rowH + 1)
-autosetBtn.Text = "Set AutoTP"
-autosetBtn.Font = Enum.Font.GothamBold
-autosetBtn.TextSize = 12
-autosetBtn.BackgroundColor3 = bluebtn
-autosetBtn.TextColor3 = Color3.new(1,1,1)
-autosetBtn.BorderSizePixel = 0
-addButtonCorner(autosetBtn)
-
---- 3. Set Spawn (ขั้นบันไดระดับ 2)
-local spawnCircle = makeStatusCircle(frame, statusColors.off, 2 * stepOffset, y0 + rowH * 2)
-local spawnBtn = Instance.new("TextButton", frame)
-spawnBtn.Size = UDim2.new(0, 110, 0, 22)
-spawnBtn.Position = UDim2.new(0, leftX + 18 + 2 * stepOffset, 0, y0 + rowH * 2 + 1)
-spawnBtn.Text = "Set Spawn"
-spawnBtn.Font = Enum.Font.GothamBold
-spawnBtn.TextSize = 13
-spawnBtn.BackgroundColor3 = darkbtn
-spawnBtn.TextColor3 = Color3.new(1,1,1)
-spawnBtn.BorderSizePixel = 0
-addButtonCorner(spawnBtn)
-
---- 4. DiedTP (ขั้นบันไดระดับ 3)
-local diedtpCircle = makeStatusCircle(frame, statusColors.off, 3 * stepOffset, y0 + rowH * 3)
-local diedtpBtn = Instance.new("TextButton", frame)
-diedtpBtn.Size = UDim2.new(0, 110, 0, 22)
-diedtpBtn.Position = UDim2.new(0, leftX + 18 + 3 * stepOffset, 0, y0 + rowH * 3 + 1)
-diedtpBtn.Text = "DiedTP : ปิด"
-diedtpBtn.Font = Enum.Font.GothamBold
-diedtpBtn.TextSize = 13
-diedtpBtn.BackgroundColor3 = darkbtn
-diedtpBtn.TextColor3 = Color3.new(1,1,1)
-diedtpBtn.BorderSizePixel = 0
-addButtonCorner(diedtpBtn)
-
---- 5. Antiidle (ขั้นบันไดระดับ 4)
-local antiidleCircle = makeStatusCircle(frame, statusColors.off, 4 * stepOffset, y0 + rowH * 4)
-local antiidleBtn = Instance.new("TextButton", frame)
-antiidleBtn.Size = UDim2.new(0, 130, 0, 22)
-antiidleBtn.Position = UDim2.new(0, leftX + 18 + 4 * stepOffset, 0, y0 + rowH * 4 + 1)
-antiidleBtn.Text = "Antiidle (Off)"
-antiidleBtn.Font = Enum.Font.GothamBold
-antiidleBtn.TextSize = 13
-antiidleBtn.BackgroundColor3 = bluebtn
-antiidleBtn.TextColor3 = Color3.new(1,1,1)
-antiidleBtn.BorderSizePixel = 0
-addButtonCorner(antiidleBtn)
-
---- 6. Autoพิมพ์ !rejoin (ขั้นบันไดระดับ 5)
-local autorejoinCircle = makeStatusCircle(frame, statusColors.off, 5 * stepOffset, y0 + rowH * 5)
-local autorejoinBtn = Instance.new("TextButton", frame)
-autorejoinBtn.Size = UDim2.new(0, 160, 0, 22)
-autorejoinBtn.Position = UDim2.new(0, leftX + 18 + 5 * stepOffset, 0, y0 + rowH * 5 + 1)
-autorejoinBtn.Text = "Autoพิมพ์ !rejoin : ปิด"
-autorejoinBtn.Font = Enum.Font.GothamBold
-autorejoinBtn.TextSize = 13
-autorejoinBtn.BackgroundColor3 = darkbtn
-autorejoinBtn.TextColor3 = Color3.new(1,1,1)
-autorejoinBtn.BorderSizePixel = 0
-addButtonCorner(autorejoinBtn)
-
---- 7. Ctrl+Click Teleport (ขั้นบันไดระดับ 6)
-local ctrlclickCircle = makeStatusCircle(frame, statusColors.off, 6 * stepOffset, y0 + rowH * 6)
-local ctrlclickBtn = Instance.new("TextButton", frame)
-ctrlclickBtn.Size = UDim2.new(0, 180, 0, 22)
-ctrlclickBtn.Position = UDim2.new(0, leftX + 18 + 6 * stepOffset, 0, y0 + rowH * 6 + 1)
-ctrlclickBtn.Text = "Ctrl+Click Teleport : ปิด"
-ctrlclickBtn.Font = Enum.Font.GothamBold
-ctrlclickBtn.TextSize = 13
-ctrlclickBtn.BackgroundColor3 = darkbtn
-ctrlclickBtn.TextColor3 = Color3.new(1,1,1)
-ctrlclickBtn.BorderSizePixel = 0
-addButtonCorner(ctrlclickBtn)
-
--------------------- LOGIC (Utility) ------------------
-
--- 1. Loop AutoTP (เพิ่ม logic พื้นฐาน)
-local loopautotpEnabled = false
-local loopPoints = {}
-loopautotpBtn.MouseButton1Click:Connect(function()
-    loopautotpEnabled = not loopautotpEnabled
-    loopautotpBtn.Text = "Loop AutoTP : " .. (loopautotpEnabled and "เปิด" or "ปิด")
-    loopautotpcircle.BackgroundColor3 = loopautotpEnabled and statusColors.on or statusColors.off
+-- Draggable Function
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
 end)
-addLoopTPBtn.MouseButton1Click:Connect(function()
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Separator Labels
+local toggleLabel = Instance.new("TextLabel")
+toggleLabel.Size = UDim2.new(1, 0, 0, 15)
+toggleLabel.Position = UDim2.new(0, 0, 0.1, 0)
+toggleLabel.BackgroundTransparency = 1
+toggleLabel.Text = "Toggles"
+toggleLabel.Font = Enum.Font.Gotham
+toggleLabel.TextSize = 12
+toggleLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+toggleLabel.Parent = frame
+
+local actionLabel = Instance.new("TextLabel")
+actionLabel.Size = UDim2.new(1, 0, 0, 15)
+actionLabel.Position = UDim2.new(0, 0, 0.2, 0)
+actionLabel.BackgroundTransparency = 1
+actionLabel.Text = "Actions"
+actionLabel.Font = Enum.Font.Gotham
+actionLabel.TextSize = 12
+actionLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+actionLabel.Parent = frame
+
+local hotkeyLabel = Instance.new("TextLabel")
+hotkeyLabel.Size = UDim2.new(1, 0, 0, 15)
+hotkeyLabel.Position = UDim2.new(0, 0, 0.65, 0)
+hotkeyLabel.BackgroundTransparency = 1
+hotkeyLabel.Text = "Hotkeys"
+hotkeyLabel.Font = Enum.Font.Gotham
+hotkeyLabel.TextSize = 12
+hotkeyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+hotkeyLabel.Parent = frame
+
+-- GUI Hotkey (Default Alt, Selectable)
+local guiHotkey = Enum.KeyCode.LeftAlt
+local guiHotkeyLabel = Instance.new("TextLabel")
+guiHotkeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
+guiHotkeyLabel.Position = UDim2.new(0.05, 0, 0.75, 0)
+guiHotkeyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+guiHotkeyLabel.Text = "LeftAlt"
+guiHotkeyLabel.Font = Enum.Font.Gotham
+guiHotkeyLabel.TextSize = 14
+guiHotkeyLabel.TextColor3 = Color3.new(1, 1, 1)
+guiHotkeyLabel.Parent = frame
+
+local guiHotkeyCorner = Instance.new("UICorner")
+guiHotkeyCorner.CornerRadius = UDim.new(0, 6)
+guiHotkeyCorner.Parent = guiHotkeyLabel
+
+local guiHotkeySetBtn = Instance.new("TextButton")
+guiHotkeySetBtn.Size = UDim2.new(0.15, 0, 0, 30)
+guiHotkeySetBtn.Position = UDim2.new(0.4, 0, 0.75, 0)
+guiHotkeySetBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+guiHotkeySetBtn.Text = "Set"
+guiHotkeySetBtn.Font = Enum.Font.Gotham
+guiHotkeySetBtn.TextSize = 14
+guiHotkeySetBtn.TextColor3 = Color3.new(1, 1, 1)
+guiHotkeySetBtn.Parent = frame
+
+local guiSetCorner = Instance.new("UICorner")
+guiSetCorner.CornerRadius = UDim.new(0, 6)
+guiSetCorner.Parent = guiHotkeySetBtn
+
+local waitingForGuiKey = false
+guiHotkeySetBtn.MouseButton1Click:Connect(function()
+    waitingForGuiKey = true
+    guiHotkeyLabel.Text = "Press a key..."
+end)
+
+local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.4, 0, 0.80, 0))
+guiHotkeySetBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        guiHotkeySetTooltip.Visible = true
+    end
+end)
+guiHotkeySetBtn.MouseLeave:Connect(function()
+    guiHotkeySetTooltip.Visible = false
+end)
+
+-- Logic for Features
+local rejoinEnabled = false
+local lastHealth = math.huge
+local rejoinConnection
+local spawnPos = nil
+local loopTPEnabled = false
+local loopPoints = {}
+local antiAFKEnabled = true -- Default ON
+local antiAFKConn
+local clickTPEnabled = false
+local clickTPToggleKey = Enum.KeyCode.CapsLock -- Default CapsLock for toggling Click TP
+local mouse = player:GetMouse()
+
+-- Anti AFK Initial Setup
+antiAFKConn = player.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+local function sendRejoin()
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if not channel then
+            channel = TextChatService.TextChannels:GetChildren()[1]
+        end
+        if channel then
+            channel:SendAsync("!rejoin")
+        end
+    else
+        local chatEvents = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+        if chatEvents then
+            local sayMessage = chatEvents:FindFirstChild("SayMessageRequest")
+            if sayMessage then
+                sayMessage:FireServer("!rejoin", "All")
+            end
+        end
+    end
+end
+
+local function setupHumanoid(humanoid)
+    if rejoinConnection then rejoinConnection:Disconnect() end
+    lastHealth = humanoid.Health
+    rejoinConnection = humanoid.HealthChanged:Connect(function(newHealth)
+        if rejoinEnabled and newHealth < lastHealth then
+            sendRejoin()
+        end
+        lastHealth = newHealth
+    end)
+end
+
+-- Button Creation Function
+local function createButton(parent, text, pos, toggleFunc, colorOn, colorOff)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.3, 0, 0, 30)
+    btn.Position = pos
+    btn.BackgroundColor3 = colorOff or Color3.fromRGB(50, 50, 50)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Parent = parent
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+    if toggleFunc then
+        btn.MouseButton1Click:Connect(function()
+            toggleFunc(btn, colorOn or Color3.fromRGB(0, 150, 0), colorOff or Color3.fromRGB(150, 0, 0))
+        end)
+    end
+    return btn
+end
+
+-- Toggle Buttons
+local antiAFKToggle = createButton(frame, "Anti AFK: ON", UDim2.new(0.05, 0, 0.15, 0), function(btn, on, off)
+    antiAFKEnabled = not antiAFKEnabled
+    btn.Text = "Anti AFK: " .. (antiAFKEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = antiAFKEnabled and on or off
+    if antiAFKEnabled then
+        antiAFKConn = player.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+    else
+        if antiAFKConn then antiAFKConn:Disconnect() end
+    end
+end, Color3.fromRGB(0, 150, 0), Color3.fromRGB(150, 0, 0))
+
+local antiAFKTooltip = createTooltip(frame, "Prevents kicking for being idle", UDim2.new(0.05, 0, 0.20, 0))
+antiAFKToggle.MouseEnter:Connect(function()
+    if not collapsed then
+        antiAFKTooltip.Visible = true
+    end
+end)
+antiAFKToggle.MouseLeave:Connect(function()
+    antiAFKTooltip.Visible = false
+end)
+
+local loopToggle = createButton(frame, "Loop TP: OFF", UDim2.new(0.05, 0, 0.25, 0), function(btn, on, off)
+    loopTPEnabled = not loopTPEnabled
+    btn.Text = "Loop TP: " .. (loopTPEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = loopTPEnabled and on or off
+end)
+
+local loopTooltip = createTooltip(frame, "Teleports between added points in loop", UDim2.new(0.05, 0, 0.30, 0))
+loopToggle.MouseEnter:Connect(function()
+    if not collapsed then
+        loopTooltip.Visible = true
+    end
+end)
+loopToggle.MouseLeave:Connect(function()
+    loopTooltip.Visible = false
+end)
+
+local clickTPToggle = createButton(frame, "Click TP: OFF", UDim2.new(0.05, 0, 0.35, 0), function(btn, on, off)
+    clickTPEnabled = not clickTPEnabled
+    btn.Text = "Click TP: " .. (clickTPEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = clickTPEnabled and on or off
+    clickTPToggleKeyLabel.Visible = clickTPEnabled
+    clickTPToggleKeySetBtn.Visible = clickTPEnabled
+    clickTPToggleKeySetBtn.Active = clickTPEnabled
+end)
+
+local clickTPTooltip = createTooltip(frame, "Click to teleport to mouse position", UDim2.new(0.05, 0, 0.40, 0))
+clickTPToggle.MouseEnter:Connect(function()
+    if not collapsed then
+        clickTPTooltip.Visible = true
+    end
+end)
+clickTPToggle.MouseLeave:Connect(function()
+    clickTPTooltip.Visible = false
+end)
+
+local rejoinToggle = createButton(frame, "Rejoin: OFF", UDim2.new(0.05, 0, 0.55, 0), function(btn, on, off)
+    rejoinEnabled = not rejoinEnabled
+    btn.Text = "Rejoin: " .. (rejoinEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = rejoinEnabled and on or off
+    if rejoinEnabled then
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                setupHumanoid(humanoid)
+            end
+        end
+    else
+        if rejoinConnection then rejoinConnection:Disconnect() end
+    end
+end)
+
+local rejoinTooltip = createTooltip(frame, "Sends !rejoin when damaged", UDim2.new(0.05, 0, 0.60, 0))
+rejoinToggle.MouseEnter:Connect(function()
+    if not collapsed then
+        rejoinTooltip.Visible = true
+    end
+end)
+rejoinToggle.MouseLeave:Connect(function()
+    rejoinTooltip.Visible = false
+end)
+
+-- Action Buttons
+local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.05, 0, 0.45, 0), function(btn)
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPos = char.HumanoidRootPart.Position
+        btn.Text = "Spawn Set!"
+        wait(1)
+        btn.Text = "Set Spawn"
+    end
+end)
+
+local setSpawnTooltip = createTooltip(frame, "Sets spawn point for respawn", UDim2.new(0.05, 0, 0.50, 0))
+setSpawnBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        setSpawnTooltip.Visible = true
+    end
+end)
+setSpawnBtn.MouseLeave:Connect(function()
+    setSpawnTooltip.Visible = false
+end)
+
+local addPointBtn = createButton(frame, "Add Point", UDim2.new(0.35, 0, 0.25, 0), function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         table.insert(loopPoints, char.HumanoidRootPart.Position)
     end
 end)
+
+local addPointTooltip = createTooltip(frame, "Adds current position to Loop TP points", UDim2.new(0.35, 0, 0.30, 0))
+addPointBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        addPointTooltip.Visible = true
+    end
+end)
+addPointBtn.MouseLeave:Connect(function()
+    addPointTooltip.Visible = false
+end)
+
+local clearPointsBtn = createButton(frame, "Clear Points", UDim2.new(0.65, 0, 0.25, 0), function(btn)
+    loopPoints = {}
+    btn.Text = "Points Cleared!"
+    wait(1)
+    btn.Text = "Clear Points"
+end)
+
+local clearPointsTooltip = createTooltip(frame, "Clears all Loop TP points", UDim2.new(0.65, 0, 0.30, 0))
+clearPointsBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        clearPointsTooltip.Visible = true
+    end
+end)
+clearPointsBtn.MouseLeave:Connect(function()
+    clearPointsTooltip.Visible = false
+end)
+
+-- Click TP Toggle Hotkey
+local clickTPToggleKey = Enum.KeyCode.CapsLock
+local clickTPToggleKeyLabel = Instance.new("TextLabel")
+clickTPToggleKeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
+clickTPToggleKeyLabel.Position = UDim2.new(0.35, 0, 0.35, 0)
+clickTPToggleKeyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+clickTPToggleKeyLabel.Text = "CapsLock"
+clickTPToggleKeyLabel.Font = Enum.Font.Gotham
+clickTPToggleKeyLabel.TextSize = 14
+clickTPToggleKeyLabel.TextColor3 = Color3.new(1, 1, 1)
+clickTPToggleKeyLabel.Visible = false -- Initially hidden
+clickTPToggleKeyLabel.Parent = frame
+
+local clickTPToggleKeyCorner = Instance.new("UICorner")
+clickTPToggleKeyCorner.CornerRadius = UDim.new(0, 6)
+clickTPToggleKeyCorner.Parent = clickTPToggleKeyLabel
+
+local clickTPToggleKeySetBtn = Instance.new("TextButton")
+clickTPToggleKeySetBtn.Size = UDim2.new(0.15, 0, 0, 30)
+clickTPToggleKeySetBtn.Position = UDim2.new(0.65, 0, 0.35, 0)
+clickTPToggleKeySetBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+clickTPToggleKeySetBtn.Text = "Set"
+clickTPToggleKeySetBtn.Font = Enum.Font.Gotham
+clickTPToggleKeySetBtn.TextSize = 14
+clickTPToggleKeySetBtn.TextColor3 = Color3.new(1, 1, 1)
+clickTPToggleKeySetBtn.Visible = false -- Initially hidden
+clickTPToggleKeySetBtn.Active = false -- Initially disabled
+clickTPToggleKeySetBtn.Parent = frame
+
+local clickTPToggleKeySetCorner = Instance.new("UICorner")
+clickTPToggleKeySetCorner.CornerRadius = UDim.new(0, 6)
+clickTPToggleKeySetCorner.Parent = clickTPToggleKeySetBtn
+
+local waitingForClickTPToggleKey = false
+clickTPToggleKeySetBtn.MouseButton1Click:Connect(function()
+    if clickTPEnabled then
+        waitingForClickTPToggleKey = true
+        clickTPToggleKeyLabel.Text = "Press a key..."
+    end
+end)
+
+local clickTPToggleKeySetTooltip = createTooltip(frame, "Sets hotkey to toggle Click TP", UDim2.new(0.65, 0, 0.40, 0))
+clickTPToggleKeySetBtn.MouseEnter:Connect(function()
+    if not collapsed then
+        clickTPToggleKeySetTooltip.Visible = true
+    end
+end)
+clickTPToggleKeySetBtn.MouseLeave:Connect(function()
+    clickTPToggleKeySetTooltip.Visible = false
+end)
+
+-- Input Handling
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if waitingForGuiKey then
+            guiHotkey = input.KeyCode
+            guiHotkeyLabel.Text = input.KeyCode.Name
+            waitingForGuiKey = false
+        elseif waitingForClickTPToggleKey and clickTPEnabled then
+            clickTPToggleKey = input.KeyCode
+            clickTPToggleKeyLabel.Text = input.KeyCode.Name
+            waitingForClickTPToggleKey = false
+        elseif input.KeyCode == guiHotkey then
+            frame.Visible = not frame.Visible
+        elseif input.KeyCode == clickTPToggleKey then
+            clickTPEnabled = not clickTPEnabled
+            clickTPToggle.Text = "Click TP: " .. (clickTPEnabled and "ON" or "OFF")
+            clickTPToggle.BackgroundColor3 = clickTPEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+            clickTPToggleKeyLabel.Visible = clickTPEnabled
+            clickTPToggleKeySetBtn.Visible = clickTPEnabled
+            clickTPToggleKeySetBtn.Active = clickTPEnabled
+        end
+    end
+end)
+
+-- Loop Auto TP Logic
 spawn(function()
     while true do
-        if loopautotpEnabled and #loopPoints > 0 then
+        if loopTPEnabled and #loopPoints > 0 then
             for _, pos in ipairs(loopPoints) do
                 if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                     player.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
                 end
-                wait(1)  -- เวลาหน่วงระหว่างจุด
+                RunService.Heartbeat:Wait()
             end
-        end
-        wait(0.1)
-    end
-end)
-
--- 2. AutoTP (เลือด <= 9% วาปทุก 0.5 วิ)
-local autotpenabled = false
-local autotpPos
-local autoTP_HUMANOID = nil
-local autoTPLoop = nil
-local function setAutoTP(state)
-    autotpenabled = state
-    autotpswitch.Text = "AutoTP : " .. (state and "เปิด" or "ปิด")
-    autotpcircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-    if not state and autoTPLoop then
-        autoTPLoop = nil
-    end
-end
-autotpswitch.MouseButton1Click:Connect(function() setAutoTP(not autotpenabled) end)
-autosetBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        autotpPos = char.HumanoidRootPart.Position
-    end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    if diedtpEnabled and spawnPos then  -- ปรับให้เช็ค diedtpEnabled
-        local hrp = char:WaitForChild("HumanoidRootPart", 3)
-        if hrp then hrp.CFrame = CFrame.new(spawnPos) end
-    end
-    if autoTP_HUMANOID then pcall(function() autoTP_HUMANOID.HealthChanged:Disconnect() end) end
-    autoTP_HUMANOID = char:FindFirstChildOfClass("Humanoid")
-    if autoTP_HUMANOID then
-        autoTP_HUMANOID.HealthChanged:Connect(function()
-            if autotpenabled and autotpPos then
-                if autoTP_HUMANOID.Health > 0 and (autoTP_HUMANOID.Health / autoTP_HUMANOID.MaxHealth) <= 0.09 and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead then
-                    if not autoTPLoop then
-                        autoTPLoop = true
-                        spawn(function()
-                            while autotpenabled and autoTP_HUMANOID and autoTP_HUMANOID.Health > 0 and (autoTP_HUMANOID.Health / autoTP_HUMANOID.MaxHealth) <= 0.09 and autoTP_HUMANOID:GetState() ~= Enum.HumanoidStateType.Dead do
-                                local c = player.Character
-                                if c and c:FindFirstChild("HumanoidRootPart") and autotpPos then
-                                    c.HumanoidRootPart.CFrame = CFrame.new(autotpPos)
-                                end
-                                wait(0.5)
-                            end
-                            autoTPLoop = nil
-                        end)
-                    end
-                end
-            end
-        end)
-    end
-end)
-
--- 3. Set Spawn
-local spawnPos = nil
-spawnBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        spawnPos = char.HumanoidRootPart.Position
-        spawnCircle.BackgroundColor3 = statusColors.on
-        spawnBtn.Text = "Spawn Set!"
-        wait(2)
-        spawnBtn.Text = "Set Spawn"
-    end
-end)
-
--- 4. DiedTP
-local diedtpEnabled = false
-diedtpBtn.MouseButton1Click:Connect(function()
-    diedtpEnabled = not diedtpEnabled
-    diedtpBtn.Text = "DiedTP : " .. (diedtpEnabled and "เปิด" or "ปิด")
-    diedtpCircle.BackgroundColor3 = diedtpEnabled and statusColors.on or statusColors.off
-end)
-
--- 5. Antiidle
-local antiidleEnabled = false
-local antiidleConn
-local function setAntiIdle(state)
-    antiidleEnabled = state
-    antiidleBtn.Text = "Antiidle (" .. (state and "On" or "Off") .. ")"
-    antiidleCircle.BackgroundColor3 = state and statusColors.on or statusColors.off
-    if state and not antiidleConn then
-        antiidleConn = player.Idled:Connect(function()
-            game:GetService("VirtualUser"):CaptureController()
-            game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-        end)
-    elseif not state and antiidleConn then
-        antiidleConn:Disconnect()
-        antiidleConn = nil
-    end
-end
-antiidleBtn.MouseButton1Click:Connect(function() setAntiIdle(not antiidleEnabled) end)
-
--- 6. Autoพิมพ์ !rejoin
-local autorejoinEnabled = false
-local autorejoinLoop = nil
-
-local function sendRejoin()
-    local success = false
-    -- ระบบเก่า (DefaultChatSystemChatEvents)
-    local ok, _ = pcall(function()
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("!rejoin", "All")
-    end)
-    if ok then
-        success = true
-    end
-    -- ระบบใหม่ (TextChatService)
-    if not success then
-        local TextChatService = game:GetService("TextChatService")
-        if TextChatService and TextChatService.TextChannels then
-            for _,channel in pairs(TextChatService.TextChannels:GetChildren()) do
-                if channel:IsA("TextChannel") then
-                    local ok2, _ = pcall(function()
-                        channel:SendAsync("!rejoin")
-                    end)
-                    if ok2 then
-                        success = true
-                        break
-                    end
-                end
-            end
-            if not success and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
-                pcall(function()
-                    TextChatService.TextChannels.RBXGeneral:SendAsync("!rejoin")
-                end)
-            end
+        else
+            RunService.Heartbeat:Wait()
         end
     end
-end
-
-autorejoinBtn.MouseButton1Click:Connect(function()
-    autorejoinEnabled = not autorejoinEnabled
-    autorejoinBtn.Text = "Autoพิมพ์ !rejoin : " .. (autorejoinEnabled and "เปิด" or "ปิด")
-    autorejoinCircle.BackgroundColor3 = autorejoinEnabled and statusColors.on or statusColors.off
-    if autorejoinEnabled then
-        autorejoinLoop = true
-        spawn(function()
-            while autorejoinLoop do
-                sendRejoin()
-                wait(0.2)
-            end
-        end)
-    else
-        autorejoinLoop = false
-    end
 end)
 
--- 7. Ctrl+Click Teleport
-local ctrlClickEnabled = false
-ctrlclickBtn.MouseButton1Click:Connect(function()
-    ctrlClickEnabled = not ctrlClickEnabled
-    ctrlclickBtn.Text = "Ctrl+Click Teleport : " .. (ctrlClickEnabled and "เปิด" or "ปิด")
-    ctrlclickCircle.BackgroundColor3 = ctrlClickEnabled and statusColors.on or statusColors.off
-end)
-
-local mouse = player:GetMouse()
+-- Click TP Logic
 mouse.Button1Down:Connect(function()
-    if ctrlClickEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+    if clickTPEnabled then
         local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local unitRay = workspace.CurrentCamera:ScreenPointToRay(mouse.X, mouse.Y)
-            local ray = Ray.new(unitRay.Origin, unitRay.Direction * 500)
-            local part, pos = workspace:FindPartOnRay(ray, char)
-            if pos then
-                char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
+        local camera = workspace.CurrentCamera
+        if char and char:FindFirstChild("HumanoidRootPart") and camera then
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {char}
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            local unitRay = camera:ScreenPointToRay(mouse.X, mouse.Y)
+            local rayResult = workspace:Raycast(unitRay.Origin, unitRay.Direction * 500, raycastParams)
+            if rayResult then
+                char.HumanoidRootPart.CFrame = CFrame.new(rayResult.Position + Vector3.new(0, 3, 0))
             end
         end
     end
 end)
 
--------------------- UNIVERSAL ANTI-DEBUFF + ANTI-SWITCH (ไม่ซ้ำ) ------------------
-
-local UIS = game:GetService("UserInputService")
-local NORMAL_WALKSPEED = 16
-local NORMAL_JUMPPOWER = 50
-
--- ฟังก์ชันป้องกันสถานะผิดปกติและบล็อกการสลับอาวุธ
-local function fixHumanoid(humanoid)
-    if not humanoid then return end
-
-    -- ป้องกัน debuff ทุกชนิด
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.PlatformStand then humanoid.PlatformStand = false end
-            if humanoid.Sit then humanoid.Sit = false end
-            if humanoid:GetState() == Enum.HumanoidStateType.Physics
-            or humanoid:GetState() == Enum.HumanoidStateType.FallingDown
-            or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll
-            or humanoid:GetState() == Enum.HumanoidStateType.Seated
-            or humanoid:GetState() == Enum.HumanoidStateType.PlatformStanding then
-                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-            end
-            wait(0.05)
+-- Handle Character Respawn
+player.CharacterAdded:Connect(function(char)
+    if spawnPos then
+        local hrp = char:WaitForChild("HumanoidRootPart", 3)
+        if hrp then
+            hrp.CFrame = CFrame.new(spawnPos)
         end
-    end)
-    -- ป้องกัน slow/freeze/root
-    spawn(function()
-        while humanoid.Parent do
-            if humanoid.WalkSpeed < NORMAL_WALKSPEED then
-                humanoid.WalkSpeed = NORMAL_WALKSPEED
-            end
-            if humanoid.JumpPower < NORMAL_JUMPPOWER then
-                humanoid.JumpPower = NORMAL_JUMPPOWER
-            end
-            if humanoid.WalkSpeed > 100 then
-                humanoid.WalkSpeed = NORMAL_WALKSPEED
-            end
-            wait(0.05)
-        end
-    end)
-    -- คืน tool หากโดนบังคับถอด
-    local bp = player.Backpack
-    humanoid.ChildRemoved:Connect(function(child)
-        if child:IsA("Tool") then
-            wait(0.1)
-            if bp:FindFirstChild(child.Name) then
-                bp[child.Name].Parent = player.Character
-            end
-        end
-    end)
-    -- กันโดน destroy tool (เท่าที่ Roblox อนุญาต)
-    bp.ChildRemoved:Connect(function(tool)
-        wait(0.1)
-        if tool and not bp:FindFirstChild(tool.Name) and not (player.Character and player.Character:FindFirstChild(tool.Name)) then
-            tool.Parent = bp
-        end
-    end)
-end
+    end
+    local humanoid = char:WaitForChild("Humanoid")
+    if rejoinEnabled then
+        setupHumanoid(humanoid)
+    end
+end)
 
-local function hookAll()
-    local char = player.Character
-    if not char then return end
-    local human = char:FindFirstChildOfClass("Humanoid")
-    if human then
-        fixHumanoid(human)
+-- Initial Setup
+if player.Character then
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid and rejoinEnabled then
+        setupHumanoid(humanoid)
     end
 end
-if player.Character then hookAll() end
-player.CharacterAdded:Connect(hookAll)
-
--- สลับอาวุธ/Tool ด้วยปุ่ม 1-9 และ MouseWheel
-UIS.InputBegan:Connect(function(input, gameProcessed)
-    -- Hotkey 1-9
-    if gameProcessed then
-        local keyNum = tonumber(input.KeyCode.Name:match("(%d)"))
-        if keyNum and keyNum >= 1 and keyNum <= 9 then
-            local tools = {}
-            for _, tool in ipairs(player.Backpack:GetChildren()) do
-                if tool:IsA("Tool") then table.insert(tools, tool) end
-            end
-            local tool = tools[keyNum]
-            if tool then
-                tool.Parent = player.Character
-            end
-        end
-    end
-end)
-UIS.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local function getTools()
-            local tools = {}
-            for _, tool in ipairs(player.Backpack:GetChildren()) do
-                if tool:IsA("Tool") then table.insert(tools, tool) end
-            end
-            return tools
-        end
-        local function equipNextTool()
-            local tools = getTools()
-            if #tools == 0 then return end
-            local current = player.Character and player.Character:FindFirstChildOfClass("Tool")
-            local idx = 1
-            if current then
-                for i, tool in ipairs(tools) do
-                    if tool == current then
-                        idx = i % #tools + 1
-                        break
-                    end
-                end
-            end
-            tools[idx].Parent = player.Character
-        end
-        local function equipPreviousTool()
-            local tools = getTools()
-            if #tools == 0 then return end
-            local current = player.Character and player.Character:FindFirstChildOfClass("Tool")
-            local idx = #tools
-            if current then
-                for i, tool in ipairs(tools) do
-                    if tool == current then
-                        idx = (i-2) % #tools + 1
-                        break
-                    end
-                end
-            end
-            tools[idx].Parent = player.Character
-        end
-        if input.Position.Z > 0 then
-            equipNextTool()
-        elseif input.Position.Z < 0 then
-            equipPreviousTool()
-        end
-    end
-end)
-
--- ป้องกันโดนบังคับ unequip/คืน Tool อัตโนมัติ
-player.Backpack.ChildRemoved:Connect(function(tool)
-    wait(0.1)
-    if tool and not player.Character:FindFirstChild(tool.Name) and not player.Backpack:FindFirstChild(tool.Name) then
-        tool.Parent = player.Backpack
-    end
-end)
-
-player.Backpack.ChildAdded:Connect(function(tool)
-    wait(0.1)
-    if tool and player.Character and not player.Character:FindFirstChildOfClass("Tool") then
-        tool.Parent = player.Character
-    end
-end)
-
--- Auto Respawn เมื่อโดน kill
-local function autoRespawnHook(char)
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.Died:Connect(function()
-            wait(1)
-            if player and player.Character == nil then
-                player:LoadCharacter()
-            end
-        end)
-    end
-end
-if player.Character then autoRespawnHook(player.Character) end
-player.CharacterAdded:Connect(autoRespawnHook)
