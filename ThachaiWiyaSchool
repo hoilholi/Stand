@@ -1,5 +1,5 @@
 -- Private Script for Roblox
--- Features: Auto send "!rejoin" when damaged (no delay), Draggable & Foldable GUI, Set Spawn, Loop Auto TP (no delay, multi-points, clearable), Anti AFK (default ON), Click TP with mouse click only, Click TP Toggle Hotkey (default CapsLock), GUI Toggle with customizable hotkey (default Alt), Tooltip for all buttons
+-- Features: Auto send "!rejoin" when damaged (no delay), Draggable GUI, Set Spawn, Loop Auto TP (no delay, multi-points, clearable), Anti AFK (default ON), Click TP with mouse click only, Click TP Toggle Hotkey (default CapsLock), GUI Toggle with customizable hotkey (default Alt), Tooltip for all buttons
 
 local player = game.Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -11,7 +11,7 @@ gui.Name = "PrivateScriptGUI"
 gui.Parent = player:WaitForChild("PlayerGui", 5)
 gui.ResetOnSpawn = false
 
--- Main Frame (Draggable, Foldable)
+-- Main Frame (Draggable)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 300, 0, 300)
 frame.Position = UDim2.new(0.5, -150, 0.5, -150)
@@ -43,45 +43,6 @@ local function createTooltip(parent, text, pos)
     tooltipCorner.Parent = tooltip
     return tooltip
 end
-
--- Minimize Button
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
-minimizeBtn.Position = UDim2.new(1, -30, 0, 5)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-minimizeBtn.Text = "-"
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 14
-minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
-minimizeBtn.Parent = frame
-
-local minCorner = Instance.new("UICorner")
-minCorner.CornerRadius = UDim.new(0, 4)
-minCorner.Parent = minimizeBtn
-
-local minimizeTooltip = createTooltip(frame, "Minimizes or expands the GUI", UDim2.new(1, -230, 0, 35))
-minimizeBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        minimizeTooltip.Visible = true
-    end
-end)
-minimizeBtn.MouseLeave:Connect(function()
-    minimizeTooltip.Visible = false
-end)
-
-local fullSize = UDim2.new(0, 300, 0, 300)
-local collapsedSize = UDim2.new(0, 300, 0, 30)
-local collapsed = false
-minimizeBtn.MouseButton1Click:Connect(function()
-    collapsed = not collapsed
-    minimizeBtn.Text = collapsed and "+" or "-"
-    frame.Size = collapsed and collapsedSize or fullSize
-    for _, child in ipairs(frame:GetChildren()) do
-        if (child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("Frame")) and child.Position.Y.Offset > 30 then
-            child.Visible = not collapsed
-        end
-    end
-end)
 
 -- Title Label
 local title = Instance.new("TextLabel")
@@ -188,9 +149,7 @@ end)
 
 local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.4, 0, 0.80, 0))
 guiHotkeySetBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        guiHotkeySetTooltip.Visible = true
-    end
+    guiHotkeySetTooltip.Visible = true
 end)
 guiHotkeySetBtn.MouseLeave:Connect(function()
     guiHotkeySetTooltip.Visible = false
@@ -285,9 +244,7 @@ end, Color3.fromRGB(0, 150, 0), Color3.fromRGB(150, 0, 0))
 
 local antiAFKTooltip = createTooltip(frame, "Prevents kicking for being idle", UDim2.new(0.05, 0, 0.20, 0))
 antiAFKToggle.MouseEnter:Connect(function()
-    if not collapsed then
-        antiAFKTooltip.Visible = true
-    end
+    antiAFKTooltip.Visible = true
 end)
 antiAFKToggle.MouseLeave:Connect(function()
     antiAFKTooltip.Visible = false
@@ -301,9 +258,7 @@ end)
 
 local loopTooltip = createTooltip(frame, "Teleports between added points in loop", UDim2.new(0.05, 0, 0.30, 0))
 loopToggle.MouseEnter:Connect(function()
-    if not collapsed then
-        loopTooltip.Visible = true
-    end
+    loopTooltip.Visible = true
 end)
 loopToggle.MouseLeave:Connect(function()
     loopTooltip.Visible = false
@@ -320,9 +275,7 @@ end)
 
 local clickTPTooltip = createTooltip(frame, "Click to teleport to mouse position", UDim2.new(0.05, 0, 0.40, 0))
 clickTPToggle.MouseEnter:Connect(function()
-    if not collapsed then
-        clickTPTooltip.Visible = true
-    end
+    clickTPTooltip.Visible = true
 end)
 clickTPToggle.MouseLeave:Connect(function()
     clickTPTooltip.Visible = false
@@ -347,9 +300,7 @@ end)
 
 local rejoinTooltip = createTooltip(frame, "Sends !rejoin when damaged", UDim2.new(0.05, 0, 0.60, 0))
 rejoinToggle.MouseEnter:Connect(function()
-    if not collapsed then
-        rejoinTooltip.Visible = true
-    end
+    rejoinTooltip.Visible = true
 end)
 rejoinToggle.MouseLeave:Connect(function()
     rejoinTooltip.Visible = false
@@ -368,9 +319,7 @@ end)
 
 local setSpawnTooltip = createTooltip(frame, "Sets spawn point for respawn", UDim2.new(0.05, 0, 0.50, 0))
 setSpawnBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        setSpawnTooltip.Visible = true
-    end
+    setSpawnTooltip.Visible = true
 end)
 setSpawnBtn.MouseLeave:Connect(function()
     setSpawnTooltip.Visible = false
@@ -385,9 +334,7 @@ end)
 
 local addPointTooltip = createTooltip(frame, "Adds current position to Loop TP points", UDim2.new(0.35, 0, 0.30, 0))
 addPointBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        addPointTooltip.Visible = true
-    end
+    addPointTooltip.Visible = true
 end)
 addPointBtn.MouseLeave:Connect(function()
     addPointTooltip.Visible = false
@@ -402,9 +349,7 @@ end)
 
 local clearPointsTooltip = createTooltip(frame, "Clears all Loop TP points", UDim2.new(0.65, 0, 0.30, 0))
 clearPointsBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        clearPointsTooltip.Visible = true
-    end
+    clearPointsTooltip.Visible = true
 end)
 clearPointsBtn.MouseLeave:Connect(function()
     clearPointsTooltip.Visible = false
@@ -453,9 +398,7 @@ end)
 
 local clickTPToggleKeySetTooltip = createTooltip(frame, "Sets hotkey to toggle Click TP", UDim2.new(0.65, 0, 0.40, 0))
 clickTPToggleKeySetBtn.MouseEnter:Connect(function()
-    if not collapsed then
-        clickTPToggleKeySetTooltip.Visible = true
-    end
+    clickTPToggleKeySetTooltip.Visible = true
 end)
 clickTPToggleKeySetBtn.MouseLeave:Connect(function()
     clickTPToggleKeySetTooltip.Visible = false
