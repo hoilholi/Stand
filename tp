@@ -10,7 +10,7 @@ gui.ResetOnSpawn = false
 
 -- สร้าง Main Frame (Draggable)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 400, 0, 450) -- เพิ่มความสูงเพื่อรองรับ 7 แถว
+frame.Size = UDim2.new(0, 400, 0, 450) -- ความสูงรองรับ 7 แถว
 frame.Position = UDim2.new(0.5, -200, 0.5, -225)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BackgroundTransparency = 0.15
@@ -141,7 +141,7 @@ waypointNameStroke.Transparency = 0.5
 waypointNameStroke.Parent = waypointNameBox
 
 local addWaypointBtn = createButton(frame, "Add Waypoint", UDim2.new(0.45, 0, 0.30, 0))
-local addWaypointTooltip = createTooltip(frame, "Adds current position as waypoint with given name", UDim2.new(0.45, 0, 0.36, 0))
+local addWaypointTooltip = createTooltip(frame, "Adds current position and rotation as waypoint with given name", UDim2.new(0.45, 0, 0.36, 0))
 addWaypointBtn.MouseEnter:Connect(function()
     addWaypointTooltip.Visible = true
 end)
@@ -151,7 +151,7 @@ end)
 
 -- แถว 3: Undo/Redo
 local backTPBtn = createButton(frame, "TP Back", UDim2.new(0.05, 0, 0.40, 0))
-local backTPTooltip = createTooltip(frame, "Teleport to previous position (Undo)", UDim2.new(0.05, 0, 0.46, 0))
+local backTPTooltip = createTooltip(frame, "Teleport to previous position and rotation (Undo)", UDim2.new(0.05, 0, 0.46, 0))
 backTPBtn.MouseEnter:Connect(function()
     backTPTooltip.Visible = true
 end)
@@ -160,7 +160,7 @@ backTPBtn.MouseLeave:Connect(function()
 end)
 
 local forwardTPBtn = createButton(frame, "TP Forward", UDim2.new(0.25, 0, 0.40, 0))
-local forwardTPTooltip = createTooltip(frame, "Teleport to next position (Redo)", UDim2.new(0.25, 0, 0.46, 0))
+local forwardTPTooltip = createTooltip(frame, "Teleport to next position and rotation (Redo)", UDim2.new(0.25, 0, 0.46, 0))
 forwardTPBtn.MouseEnter:Connect(function()
     forwardTPTooltip.Visible = true
 end)
@@ -170,7 +170,7 @@ end)
 
 -- แถว 4: TP to Death และ Set Spawn
 local deathTPBtn = createButton(frame, "TP to Death", UDim2.new(0.05, 0, 0.50, 0))
-local deathTPTooltip = createTooltip(frame, "Teleport to last death position", UDim2.new(0.05, 0, 0.56, 0))
+local deathTPTooltip = createTooltip(frame, "Teleport to last death position and rotation", UDim2.new(0.05, 0, 0.56, 0))
 deathTPBtn.MouseEnter:Connect(function()
     deathTPTooltip.Visible = true
 end)
@@ -179,7 +179,7 @@ deathTPBtn.MouseLeave:Connect(function()
 end)
 
 local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.25, 0, 0.50, 0))
-local setSpawnTooltip = createTooltip(frame, "Sets spawn point for respawn", UDim2.new(0.25, 0, 0.56, 0))
+local setSpawnTooltip = createTooltip(frame, "Sets spawn point with position and rotation", UDim2.new(0.25, 0, 0.56, 0))
 setSpawnBtn.MouseEnter:Connect(function()
     setSpawnTooltip.Visible = true
 end)
@@ -187,9 +187,9 @@ setSpawnBtn.MouseLeave:Connect(function()
     setSpawnTooltip.Visible = false
 end)
 
--- แถว 5: Item Search
+-- แถว 5: Item Search และ Click Teleport Hotkey
 local itemSearchBox = Instance.new("TextBox")
-itemSearchBox.Size = UDim2.new(0.22, 0, 0, 30)
+itemSearchBox.Size = UDim2.new(0.25, 0, 0, 30)
 itemSearchBox.Position = UDim2.new(0.05, 0, 0.60, 0)
 itemSearchBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 itemSearchBox.PlaceholderText = "Item Name"
@@ -208,8 +208,8 @@ itemSearchStroke.Color = Color3.fromRGB(100, 100, 100)
 itemSearchStroke.Transparency = 0.5
 itemSearchStroke.Parent = itemSearchBox
 
-local searchItemBtn = createButton(frame, "Search", UDim2.new(0.30, 0, 0.60, 0))
-local searchItemTooltip = createTooltip(frame, "Search for items by name", UDim2.new(0.30, 0, 0.66, 0))
+local searchItemBtn = createButton(frame, "Search", UDim2.new(0.32, 0, 0.60, 0))
+local searchItemTooltip = createTooltip(frame, "Search for items by name", UDim2.new(0.32, 0, 0.66, 0))
 searchItemBtn.MouseEnter:Connect(function()
     searchItemTooltip.Visible = true
 end)
@@ -217,20 +217,9 @@ searchItemBtn.MouseLeave:Connect(function()
     searchItemTooltip.Visible = false
 end)
 
--- แถว 6: Hotkeys (Click Teleport และ GUI Toggle)
-local hotkeyLabel = Instance.new("TextLabel")
-hotkeyLabel.Size = UDim2.new(0.9, 0, 0, 18)
-hotkeyLabel.Position = UDim2.new(0.05, 0, 0.70, 0)
-hotkeyLabel.BackgroundTransparency = 1
-hotkeyLabel.Text = "Hotkeys"
-hotkeyLabel.Font = Enum.Font.Gotham
-hotkeyLabel.TextSize = 12
-hotkeyLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-hotkeyLabel.Parent = frame
-
 local clickTeleportKeyLabel = Instance.new("TextLabel")
-clickTeleportKeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
-clickTeleportKeyLabel.Position = UDim2.new(0.05, 0, 0.76, 0)
+clickTeleportKeyLabel.Size = UDim2.new(0.25, 0, 0, 30)
+clickTeleportKeyLabel.Position = UDim2.new(0.52, 0, 0.60, 0)
 clickTeleportKeyLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 clickTeleportKeyLabel.Text = "CapsLock"
 clickTeleportKeyLabel.Font = Enum.Font.Gotham
@@ -242,37 +231,19 @@ local clickTeleportKeyCorner = Instance.new("UICorner")
 clickTeleportKeyCorner.CornerRadius = UDim.new(0, 8)
 clickTeleportKeyCorner.Parent = clickTeleportKeyLabel
 
-local clickTeleportSetBtn = Instance.new("TextButton")
-clickTeleportSetBtn.Size = UDim2.new(0.18, 0, 0, 30)
-clickTeleportSetBtn.Position = UDim2.new(0.37, 0, 0.76, 0)
-clickTeleportSetBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-clickTeleportSetBtn.Text = "Set"
-clickTeleportSetBtn.Font = Enum.Font.Gotham
-clickTeleportSetBtn.TextSize = 12
-clickTeleportSetBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-clickTeleportSetBtn.Parent = frame
+local clickTeleportKeyStroke = Instance.new("UIStroke")
+clickTeleportKeyStroke.Thickness = 1.5
+clickTeleportKeyStroke.Color = Color3.fromRGB(100, 100, 100)
+clickTeleportKeyStroke.Transparency = 0.5
+clickTeleportKeyStroke.Parent = clickTeleportKeyLabel
 
-local clickTeleportSetCorner = Instance.new("UICorner")
-clickTeleportSetCorner.CornerRadius = UDim.new(0, 8)
-clickTeleportSetCorner.Parent = clickTeleportSetBtn
-
-local clickTeleportSetStroke = Instance.new("UIStroke")
-clickTeleportSetStroke.Thickness = 1.5
-clickTeleportSetStroke.Color = Color3.fromRGB(100, 100, 100)
-clickTeleportSetStroke.Transparency = 0.5
-clickTeleportSetStroke.Parent = clickTeleportSetBtn
-
+local clickTeleportSetBtn = createButton(frame, "Set", UDim2.new(0.79, 0, 0.60, 0))
+local clickTeleportSetTooltip = createTooltip(frame, "Sets hotkey for click teleport", UDim2.new(0.79, 0, 0.66, 0))
 clickTeleportSetBtn.MouseEnter:Connect(function()
-    clickTeleportSetBtn.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
-    clickTeleportSetBtn.BackgroundTransparency = 0.1
-    clickTeleportSetStroke.Color = Color3.fromRGB(150, 150, 150)
-    clickTeleportSetStroke.Transparency = 0.3
+    clickTeleportSetTooltip.Visible = true
 end)
 clickTeleportSetBtn.MouseLeave:Connect(function()
-    clickTeleportSetBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-    clickTeleportSetBtn.BackgroundTransparency = 0
-    clickTeleportSetStroke.Color = Color3.fromRGB(100, 100, 100)
-    clickTeleportSetStroke.Transparency = 0.5
+    clickTeleportSetTooltip.Visible = false
 end)
 
 local waitingForClickTeleportKey = false
@@ -281,18 +252,20 @@ clickTeleportSetBtn.MouseButton1Click:Connect(function()
     clickTeleportKeyLabel.Text = "Press a key..."
 end)
 
-local clickTeleportTooltip = createTooltip(frame, "Sets hotkey for click teleport", UDim2.new(0.37, 0, 0.82, 0))
-clickTeleportSetBtn.MouseEnter:Connect(function()
-    clickTeleportTooltip.Visible = true
-end)
-clickTeleportSetBtn.MouseLeave:Connect(function()
-    clickTeleportTooltip.Visible = false
-end)
+-- แถว 6: Hotkeys (GUI Toggle)
+local hotkeyLabel = Instance.new("TextLabel")
+hotkeyLabel.Size = UDim2.new(0.9, 0, 0, 18)
+hotkeyLabel.Position = UDim2.new(0.05, 0, 0.70, 0)
+hotkeyLabel.BackgroundTransparency = 1
+hotkeyLabel.Text = "Hotkeys"
+hotkeyLabel.Font = Enum.Font.Gotham
+hotkeyLabel.TextSize = 12
+hotkeyLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+hotkeyLabel.Parent = frame
 
-local guiHotkey = Enum.KeyCode.LeftAlt
 local guiHotkeyLabel = Instance.new("TextLabel")
 guiHotkeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
-guiHotkeyLabel.Position = UDim2.new(0.55, 0, 0.76, 0)
+guiHotkeyLabel.Position = UDim2.new(0.05, 0, 0.76, 0)
 guiHotkeyLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 guiHotkeyLabel.Text = "LeftAlt"
 guiHotkeyLabel.Font = Enum.Font.Gotham
@@ -304,51 +277,19 @@ local guiHotkeyCorner = Instance.new("UICorner")
 guiHotkeyCorner.CornerRadius = UDim.new(0, 8)
 guiHotkeyCorner.Parent = guiHotkeyLabel
 
-local guiHotkeySetBtn = Instance.new("TextButton")
-guiHotkeySetBtn.Size = UDim2.new(0.18, 0, 0, 30)
-guiHotkeySetBtn.Position = UDim2.new(0.87, 0, 0.76, 0)
-guiHotkeySetBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-guiHotkeySetBtn.Text = "Set"
-guiHotkeySetBtn.Font = Enum.Font.Gotham
-guiHotkeySetBtn.TextSize = 12
-guiHotkeySetBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-guiHotkeySetBtn.Parent = frame
-
-local guiSetCorner = Instance.new("UICorner")
-guiSetCorner.CornerRadius = UDim.new(0, 8)
-guiSetCorner.Parent = guiHotkeySetBtn
-
-local guiSetStroke = Instance.new("UIStroke")
-guiSetStroke.Thickness = 1.5
-guiSetStroke.Color = Color3.fromRGB(100, 100, 100)
-guiSetStroke.Transparency = 0.5
-guiSetStroke.Parent = guiHotkeySetBtn
-
+local guiHotkeySetBtn = createButton(frame, "Set", UDim2.new(0.37, 0, 0.76, 0))
+local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.37, 0, 0.82, 0))
 guiHotkeySetBtn.MouseEnter:Connect(function()
-    guiHotkeySetBtn.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
-    guiHotkeySetBtn.BackgroundTransparency = 0.1
-    guiSetStroke.Color = Color3.fromRGB(150, 150, 150)
-    guiSetStroke.Transparency = 0.3
+    guiHotkeySetTooltip.Visible = true
 end)
 guiHotkeySetBtn.MouseLeave:Connect(function()
-    guiHotkeySetBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-    guiHotkeySetBtn.BackgroundTransparency = 0
-    guiSetStroke.Color = Color3.fromRGB(100, 100, 100)
-    guiSetStroke.Transparency = 0.5
+    guiHotkeySetTooltip.Visible = false
 end)
 
 local waitingForGuiKey = false
 guiHotkeySetBtn.MouseButton1Click:Connect(function()
     waitingForGuiKey = true
     guiHotkeyLabel.Text = "Press a key..."
-end)
-
-local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.87, 0, 0.82, 0))
-guiHotkeySetBtn.MouseEnter:Connect(function()
-    guiHotkeySetTooltip.Visible = true
-end)
-guiHotkeySetBtn.MouseLeave:Connect(function()
-    guiHotkeySetTooltip.Visible = false
 end)
 
 -- แถว 7: Players/NPCs และ Items
@@ -409,11 +350,12 @@ itemLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
 itemLabel.Parent = frame
 
 -- ตัวแปรสำหรับระบบ Teleport
-local waypoints = {}  -- {name = position}
-local previousPositions = {}  -- undo stack
-local nextPositions = {}  -- redo stack
-local deathPosition = nil
-local spawnPoint = nil
+local waypoints = {}  -- {name = CFrame}
+local previousPositions = {}  -- undo stack (CFrames)
+local nextPositions = {}  -- redo stack (CFrames)
+local deathPosition = nil  -- CFrame
+local spawnPoint = nil  -- CFrame
+local clickTeleportKey = Enum.KeyCode.CapsLock  -- ค่าเริ่มต้นสำหรับ Click Teleport
 
 -- ฟังก์ชันอัพเดทรายการ Waypoints
 local function updateWaypointList()
@@ -423,7 +365,7 @@ local function updateWaypointList()
         end
     end
     
-    for name, pos in pairs(waypoints) do
+    for name, cf in pairs(waypoints) do
         local wpFrame = Instance.new("Frame")
         wpFrame.Size = UDim2.new(1, 0, 0, 30)
         wpFrame.BackgroundTransparency = 1
@@ -473,9 +415,9 @@ local function updateWaypointList()
         tpBtn.MouseButton1Click:Connect(function()
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                table.insert(previousPositions, char.HumanoidRootPart.Position)
+                table.insert(previousPositions, char.HumanoidRootPart.CFrame)
                 nextPositions = {}  -- Clear redo stack on new teleport
-                char.HumanoidRootPart.CFrame = CFrame.new(pos)
+                char.HumanoidRootPart.CFrame = cf
             end
         end)
         
@@ -579,7 +521,7 @@ local function updatePlayerList()
             tpBtn.MouseButton1Click:Connect(function()
                 local char = player.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
-                    table.insert(previousPositions, char.HumanoidRootPart.Position)
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
                     nextPositions = {}  -- Clear redo stack on new teleport
                     char.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame
                 end
@@ -638,7 +580,7 @@ local function updatePlayerList()
             tpBtn.MouseButton1Click:Connect(function()
                 local char = player.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
-                    table.insert(previousPositions, char.HumanoidRootPart.Position)
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
                     nextPositions = {}  -- Clear redo stack on new teleport
                     char.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame
                 end
@@ -710,7 +652,7 @@ local function updateItemList(search)
             tpBtn.MouseButton1Click:Connect(function()
                 local char = player.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
-                    table.insert(previousPositions, char.HumanoidRootPart.Position)
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
                     nextPositions = {}  -- Clear redo stack on new teleport
                     char.HumanoidRootPart.CFrame = item.Handle.CFrame
                 end
@@ -740,7 +682,7 @@ addWaypointBtn.MouseButton1Click:Connect(function()
     if name == "" then return end
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        waypoints[name] = char.HumanoidRootPart.Position
+        waypoints[name] = char.HumanoidRootPart.CFrame
         waypointNameBox.Text = ""
         updateWaypointList()
     end
@@ -751,9 +693,9 @@ backTPBtn.MouseButton1Click:Connect(function()
     if #previousPositions > 0 then
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            table.insert(nextPositions, char.HumanoidRootPart.Position)
-            local lastPos = table.remove(previousPositions)
-            char.HumanoidRootPart.CFrame = CFrame.new(lastPos)
+            table.insert(nextPositions, char.HumanoidRootPart.CFrame)
+            local lastCf = table.remove(previousPositions)
+            char.HumanoidRootPart.CFrame = lastCf
         end
     end
 end)
@@ -763,9 +705,9 @@ forwardTPBtn.MouseButton1Click:Connect(function()
     if #nextPositions > 0 then
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            table.insert(previousPositions, char.HumanoidRootPart.Position)
-            local nextPos = table.remove(nextPositions)
-            char.HumanoidRootPart.CFrame = CFrame.new(nextPos)
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+            local nextCf = table.remove(nextPositions)
+            char.HumanoidRootPart.CFrame = nextCf
         end
     end
 end)
@@ -775,9 +717,9 @@ deathTPBtn.MouseButton1Click:Connect(function()
     if deathPosition then
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            table.insert(previousPositions, char.HumanoidRootPart.Position)
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
             nextPositions = {}  -- Clear redo stack on new teleport
-            char.HumanoidRootPart.CFrame = CFrame.new(deathPosition)
+            char.HumanoidRootPart.CFrame = deathPosition
         end
     end
 end)
@@ -786,7 +728,7 @@ end)
 setSpawnBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        spawnPoint = char.HumanoidRootPart.Position
+        spawnPoint = char.HumanoidRootPart.CFrame
     end
 end)
 
@@ -794,7 +736,7 @@ end)
 player.CharacterAdded:Connect(function(char)
     local hrp = char:WaitForChild("HumanoidRootPart")
     if spawnPoint then
-        hrp.CFrame = CFrame.new(spawnPoint)
+        hrp.CFrame = spawnPoint
     end
 end)
 
@@ -802,7 +744,7 @@ end)
 local function onDied()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        deathPosition = char.HumanoidRootPart.Position
+        deathPosition = char.HumanoidRootPart.CFrame
     end
 end
 
@@ -844,7 +786,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- การจัดการ Click Teleport
+-- การจัดการ Click Teleport ด้วย Hotkey
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -868,9 +810,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if char and char:FindFirstChild("HumanoidRootPart") then
             local mouse = player:GetMouse()
             local hit = mouse.Hit
-            table.insert(previousPositions, char.HumanoidRootPart.Position)
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
             nextPositions = {}  -- Clear redo stack on new teleport
-            char.HumanoidRootPart.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0))
+            char.HumanoidRootPart.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0)) * char.HumanoidRootPart.CFrame.Rotation
         end
     end
 end)
