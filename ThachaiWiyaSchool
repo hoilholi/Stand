@@ -1,5 +1,8 @@
 -- Private Script for Roblox
 -- Features: Auto send "!rejoin" when damaged (no delay), Draggable GUI, Set Spawn, Loop Auto TP (no delay, multi-points, clearable), Anti AFK (default ON), Click TP with mouse click only, Click TP Toggle Hotkey (default CapsLock), GUI Toggle with customizable hotkey (default Alt), Tooltip for all buttons
+-- Upgraded ESP: Views everything (all characters with Humanoid, including NPCs) with no distance limit, through walls, showing name, health, and distance. Added color differentiation (cyan for players, red for NPCs) and tracers (beams from player to targets).
+-- Added Item ESP: ESP for Tools (items) in workspace, showing name and distance, with green outlines and tracers.
+-- Added Auto Pickup: Automatically picks up all Tools in workspace by teleporting them to the player. Added item filtering via comma-separated names in a text box.
 
 local player = game.Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -103,7 +106,7 @@ actionLabel.Parent = frame
 
 local hotkeyLabel = Instance.new("TextLabel")
 hotkeyLabel.Size = UDim2.new(1, 0, 0, 15)
-hotkeyLabel.Position = UDim2.new(0, 0, 0.65, 0)
+hotkeyLabel.Position = UDim2.new(0, 0, 0.85, 0)
 hotkeyLabel.BackgroundTransparency = 1
 hotkeyLabel.Text = "Hotkeys"
 hotkeyLabel.Font = Enum.Font.Gotham
@@ -115,7 +118,7 @@ hotkeyLabel.Parent = frame
 local guiHotkey = Enum.KeyCode.LeftAlt
 local guiHotkeyLabel = Instance.new("TextLabel")
 guiHotkeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
-guiHotkeyLabel.Position = UDim2.new(0.05, 0, 0.75, 0)
+guiHotkeyLabel.Position = UDim2.new(0.05, 0, 0.95, 0)
 guiHotkeyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 guiHotkeyLabel.Text = "LeftAlt"
 guiHotkeyLabel.Font = Enum.Font.Gotham
@@ -129,7 +132,7 @@ guiHotkeyCorner.Parent = guiHotkeyLabel
 
 local guiHotkeySetBtn = Instance.new("TextButton")
 guiHotkeySetBtn.Size = UDim2.new(0.15, 0, 0, 30)
-guiHotkeySetBtn.Position = UDim2.new(0.4, 0, 0.75, 0)
+guiHotkeySetBtn.Position = UDim2.new(0.4, 0, 0.95, 0)
 guiHotkeySetBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 guiHotkeySetBtn.Text = "Set"
 guiHotkeySetBtn.Font = Enum.Font.Gotham
@@ -147,7 +150,7 @@ guiHotkeySetBtn.MouseButton1Click:Connect(function()
     guiHotkeyLabel.Text = "Press a key..."
 end)
 
-local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.4, 0, 0.80, 0))
+local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.4, 0, 1.00, 0))
 guiHotkeySetBtn.MouseEnter:Connect(function()
     guiHotkeySetTooltip.Visible = true
 end)
@@ -167,6 +170,30 @@ local antiAFKConn
 local clickTPEnabled = false
 local clickTPToggleKey = Enum.KeyCode.CapsLock -- Default CapsLock for toggling Click TP
 local mouse = player:GetMouse()
+local espEnabled = false
+local itemEspEnabled = false
+local highlights = {}
+local itemHighlights = {}
+local infJumpEnabled = false
+local autoPickupEnabled = false
+local autoPickupFilter = {} -- Table for filtered item names
+local playerAttachment = nil
+
+-- Update Player Attachment for Tracers
+local function updatePlayerAttachment()
+    local char = player.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            playerAttachment = hrp:FindFirstChild("TracerOrigin") or Instance.new("Attachment")
+            playerAttachment.Name = "TracerOrigin"
+            playerAttachment.Parent = hrp
+        end
+    end
+end
+
+player.CharacterAdded:Connect(updatePlayerAttachment)
+if player.Character then updatePlayerAttachment() end
 
 -- Anti AFK Initial Setup
 antiAFKConn = player.Idled:Connect(function()
@@ -205,6 +232,211 @@ local function setupHumanoid(humanoid)
     end)
 end
 
+-- ESP Functions for Characters
+local function addESPToCharacter(char)
+    if char:FindFirstChild("Humanoid") and char ~= player.Character then
+        local humanoid = char:FindFirstChild("Humanoid")
+        local p = game.Players:GetPlayerFromCharacter(char)
+        local name = p and p.Name or "NPC"
+        local color = p and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(255, 0, 0)  -- Cyan for players, red for NPCs
+        if not highlights[char] then
+            local hl = Instance.new("Highlight")
+            hl.Parent = char
+            hl.FillTransparency = 1
+            hl.OutlineTransparency = 0
+            hl.OutlineColor = color
+            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            hl.Enabled = espEnabled
+
+            local billboard = Instance.new("BillboardGui")
+            billboard.Parent = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.Adornee = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+            billboard.AlwaysOnTop = true
+            billboard.Enabled = espEnabled
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Parent = billboard
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = Color3.new(1, 1, 1)
+            textLabel.TextStrokeTransparency = 0
+            textLabel.Font = Enum.Font.Gotham
+            textLabel.TextSize = 14
+            textLabel.Text = name .. " | Health: " .. tostring(humanoid.Health) .. " | Dist: 0"
+
+            -- Tracer Beam
+            local targetAttachment = Instance.new("Attachment")
+            targetAttachment.Name = "TracerTarget"
+            targetAttachment.Parent = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+
+            local beam = Instance.new("Beam")
+            beam.Parent = char
+            beam.Attachment0 = playerAttachment
+            beam.Attachment1 = targetAttachment
+            beam.FaceCamera = true
+            beam.Color = ColorSequence.new(color)
+            beam.Width0 = 0.2
+            beam.Width1 = 0.2
+            beam.Transparency = NumberSequence.new(0)
+            beam.Enabled = espEnabled
+
+            highlights[char] = {hl, billboard, textLabel, beam, targetAttachment}
+        end
+    end
+end
+
+-- ESP Functions for Items (Tools)
+local function addESPToItem(item)
+    if item:IsA("Tool") and not itemHighlights[item] then
+        local name = item.Name
+        local color = Color3.fromRGB(0, 255, 0)  -- Green for items
+        local hl = Instance.new("Highlight")
+        hl.Parent = item
+        hl.FillTransparency = 1
+        hl.OutlineTransparency = 0
+        hl.OutlineColor = color
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Enabled = itemEspEnabled
+
+        local primaryPart = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+
+        if primaryPart then
+            local billboard = Instance.new("BillboardGui")
+            billboard.Parent = primaryPart
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.Adornee = primaryPart
+            billboard.AlwaysOnTop = true
+            billboard.Enabled = itemEspEnabled
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Parent = billboard
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.TextColor3 = Color3.new(1, 1, 1)
+            textLabel.TextStrokeTransparency = 0
+            textLabel.Font = Enum.Font.Gotham
+            textLabel.TextSize = 14
+            textLabel.Text = name .. " | Dist: 0"
+
+            -- Tracer Beam
+            local targetAttachment = Instance.new("Attachment")
+            targetAttachment.Name = "TracerTarget"
+            targetAttachment.Parent = primaryPart
+
+            local beam = Instance.new("Beam")
+            beam.Parent = item
+            beam.Attachment0 = playerAttachment
+            beam.Attachment1 = targetAttachment
+            beam.FaceCamera = true
+            beam.Color = ColorSequence.new(color)
+            beam.Width0 = 0.2
+            beam.Width1 = 0.2
+            beam.Transparency = NumberSequence.new(0)
+            beam.Enabled = itemEspEnabled
+
+            itemHighlights[item] = {hl, billboard, textLabel, beam, targetAttachment}
+        end
+    end
+end
+
+-- Initial scan for existing characters and items
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if obj:IsA("Humanoid") then
+        addESPToCharacter(obj.Parent)
+    elseif obj:IsA("Tool") then
+        addESPToItem(obj)
+    end
+end
+
+-- Listen for new characters (players or NPCs) and items
+workspace.DescendantAdded:Connect(function(desc)
+    if desc:IsA("Humanoid") then
+        addESPToCharacter(desc.Parent)
+    elseif desc:IsA("Tool") then
+        addESPToItem(desc)
+    end
+end)
+
+-- ESP update loop (no distance limit, update name, health, and distance for characters and items)
+RunService.RenderStepped:Connect(function()
+    local playerChar = player.Character
+    local playerPos = playerChar and playerChar:FindFirstChild("HumanoidRootPart") and playerChar.HumanoidRootPart.Position
+    if not playerPos then return end
+
+    if espEnabled then
+        for char, data in pairs(highlights) do
+            if char.Parent == nil then
+                data[1]:Destroy()
+                data[2]:Destroy()
+                data[4]:Destroy()
+                data[5]:Destroy()
+                highlights[char] = nil
+            else
+                local humanoid = char:FindFirstChild("Humanoid")
+                local p = game.Players:GetPlayerFromCharacter(char)
+                local name = p and p.Name or "NPC"
+                local targetPos = char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.Position or char:GetPivot().Position
+                local distance = (playerPos - targetPos).Magnitude
+                data[3].Text = name .. " | Health: " .. tostring(humanoid.Health) .. " | Dist: " .. string.format("%.1f", distance)
+            end
+        end
+    end
+
+    if itemEspEnabled then
+        for item, data in pairs(itemHighlights) do
+            if item.Parent == nil then
+                data[1]:Destroy()
+                data[2]:Destroy()
+                data[4]:Destroy()
+                data[5]:Destroy()
+                itemHighlights[item] = nil
+            else
+                local name = item.Name
+                local primaryPart = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    local targetPos = primaryPart.Position
+                    local distance = (playerPos - targetPos).Magnitude
+                    data[3].Text = name .. " | Dist: " .. string.format("%.1f", distance)
+                end
+            end
+        end
+    end
+end)
+
+-- Infinite Jump Functions
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed then
+        if input.KeyCode == Enum.KeyCode.Space and infJumpEnabled then
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+    end
+end)
+
+-- Auto Pickup Loop
+spawn(function()
+    while true do
+        if autoPickupEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                    if #autoPickupFilter == 0 or table.find(autoPickupFilter, item.Name) then
+                        local handle = item.Handle
+                        if handle:IsA("BasePart") and not handle.Anchored then
+                            handle.CFrame = hrp.CFrame
+                            wait(0.1)  -- Small delay to allow pickup
+                        end
+                    end
+                end
+            end
+        end
+        wait(0.5)  -- Loop delay to avoid performance issues
+    end
+end)
+
 -- Button Creation Function
 local function createButton(parent, text, pos, toggleFunc, colorOn, colorOff)
     local btn = Instance.new("TextButton")
@@ -228,7 +460,150 @@ local function createButton(parent, text, pos, toggleFunc, colorOn, colorOff)
 end
 
 -- Toggle Buttons
-local antiAFKToggle = createButton(frame, "Anti AFK: ON", UDim2.new(0.05, 0, 0.15, 0), function(btn, on, off)
+local espToggle = createButton(frame, "Char ESP: OFF", UDim2.new(0.05, 0, 0.15, 0), function(btn, on, off)
+    espEnabled = not espEnabled
+    btn.Text = "Char ESP: " .. (espEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = espEnabled and on or off
+    if espEnabled then
+        -- Re-scan for characters when turning on
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Humanoid") then
+                addESPToCharacter(obj.Parent)
+            end
+        end
+        -- Enable all highlights, billboards, and beams
+        for _, data in pairs(highlights) do
+            data[1].Enabled = true
+            data[2].Enabled = true
+            data[4].Enabled = true
+        end
+    else
+        for _, data in pairs(highlights) do
+            data[1].Enabled = false
+            data[2].Enabled = false
+            data[4].Enabled = false
+            data[1]:Destroy()
+            data[2]:Destroy()
+            data[4]:Destroy()
+            data[5]:Destroy()
+        end
+        highlights = {}
+    end
+end)
+
+local espTooltip = createTooltip(frame, "Shows outlines and tracers on all characters (players/NPCs) with name, health, and distance, through walls (cyan for players, red for NPCs)", UDim2.new(0.05, 0, 0.20, 0))
+espToggle.MouseEnter:Connect(function()
+    espTooltip.Visible = true
+end)
+espToggle.MouseLeave:Connect(function()
+    espTooltip.Visible = false
+end)
+
+local itemEspToggle = createButton(frame, "Item ESP: OFF", UDim2.new(0.35, 0, 0.15, 0), function(btn, on, off)
+    itemEspEnabled = not itemEspEnabled
+    btn.Text = "Item ESP: " .. (itemEspEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = itemEspEnabled and on or off
+    if itemEspEnabled then
+        -- Re-scan for items when turning on
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Tool") then
+                addESPToItem(obj)
+            end
+        end
+        -- Enable all highlights, billboards, and beams for items
+        for _, data in pairs(itemHighlights) do
+            data[1].Enabled = true
+            data[2].Enabled = true
+            data[4].Enabled = true
+        end
+    else
+        for _, data in pairs(itemHighlights) do
+            data[1].Enabled = false
+            data[2].Enabled = false
+            data[4].Enabled = false
+            data[1]:Destroy()
+            data[2]:Destroy()
+            data[4]:Destroy()
+            data[5]:Destroy()
+        end
+        itemHighlights = {}
+    end
+end)
+
+local itemEspTooltip = createTooltip(frame, "Shows outlines and tracers on all items (Tools) with name and distance, through walls (green)", UDim2.new(0.35, 0, 0.20, 0))
+itemEspToggle.MouseEnter:Connect(function()
+    itemEspTooltip.Visible = true
+end)
+itemEspToggle.MouseLeave:Connect(function()
+    itemEspTooltip.Visible = false
+end)
+
+local autoPickupToggle = createButton(frame, "Auto Pickup: OFF", UDim2.new(0.65, 0, 0.15, 0), function(btn, on, off)
+    autoPickupEnabled = not autoPickupEnabled
+    btn.Text = "Auto Pickup: " .. (autoPickupEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = autoPickupEnabled and on or off
+    autoPickupFilterLabel.Visible = autoPickupEnabled
+    autoPickupFilterBox.Visible = autoPickupEnabled
+end)
+
+local autoPickupTooltip = createTooltip(frame, "Automatically picks up all items (Tools) in workspace", UDim2.new(0.65, 0, 0.20, 0))
+autoPickupToggle.MouseEnter:Connect(function()
+    autoPickupTooltip.Visible = true
+end)
+autoPickupToggle.MouseLeave:Connect(function()
+    autoPickupTooltip.Visible = false
+end)
+
+-- Auto Pickup Filter
+local autoPickupFilterLabel = Instance.new("TextLabel")
+autoPickupFilterLabel.Size = UDim2.new(0.2, 0, 0, 30)
+autoPickupFilterLabel.Position = UDim2.new(0.35, 0, 0.25, 0)
+autoPickupFilterLabel.BackgroundTransparency = 1
+autoPickupFilterLabel.Text = "Filter:"
+autoPickupFilterLabel.Font = Enum.Font.Gotham
+autoPickupFilterLabel.TextSize = 14
+autoPickupFilterLabel.TextColor3 = Color3.new(1, 1, 1)
+autoPickupFilterLabel.Visible = false
+autoPickupFilterLabel.Parent = frame
+
+local autoPickupFilterBox = Instance.new("TextBox")
+autoPickupFilterBox.Size = UDim2.new(0.45, 0, 0, 30)
+autoPickupFilterBox.Position = UDim2.new(0.5, 0, 0.25, 0)
+autoPickupFilterBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+autoPickupFilterBox.Text = ""
+autoPickupFilterBox.PlaceholderText = "Item1, Item2"
+autoPickupFilterBox.Font = Enum.Font.Gotham
+autoPickupFilterBox.TextSize = 14
+autoPickupFilterBox.TextColor3 = Color3.new(1, 1, 1)
+autoPickupFilterBox.Visible = false
+autoPickupFilterBox.Parent = frame
+
+local autoPickupFilterCorner = Instance.new("UICorner")
+autoPickupFilterCorner.CornerRadius = UDim.new(0, 6)
+autoPickupFilterCorner.Parent = autoPickupFilterBox
+
+autoPickupFilterBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local text = autoPickupFilterBox.Text
+        autoPickupFilter = {}
+        for name in string.gmatch(text, "[^,]+") do
+            name = name:match("^%s*(.-)%s*$")  -- Trim spaces
+            if name ~= "" then
+                table.insert(autoPickupFilter, name)
+            end
+        end
+    end
+end)
+
+local autoPickupFilterTooltip = createTooltip(frame, "Enter comma-separated item names to filter (leave empty for all)", UDim2.new(0.5, 0, 0.30, 0))
+autoPickupFilterBox.MouseEnter:Connect(function()
+    autoPickupFilterTooltip.Visible = true
+end)
+autoPickupFilterBox.MouseLeave:Connect(function()
+    autoPickupFilterTooltip.Visible = false
+end)
+
+local antiAFKToggle = createButton(frame, "Anti AFK: ON", UDim2.new(0.05, 0, 0.25, 0), function(btn, on, off)
     antiAFKEnabled = not antiAFKEnabled
     btn.Text = "Anti AFK: " .. (antiAFKEnabled and "ON" or "OFF")
     btn.BackgroundColor3 = antiAFKEnabled and on or off
@@ -241,8 +616,9 @@ local antiAFKToggle = createButton(frame, "Anti AFK: ON", UDim2.new(0.05, 0, 0.1
         if antiAFKConn then antiAFKConn:Disconnect() end
     end
 end, Color3.fromRGB(0, 150, 0), Color3.fromRGB(150, 0, 0))
+antiAFKToggle.BackgroundColor3 = Color3.fromRGB(0, 150, 0)  -- Fix initial color for default ON
 
-local antiAFKTooltip = createTooltip(frame, "Prevents kicking for being idle", UDim2.new(0.05, 0, 0.20, 0))
+local antiAFKTooltip = createTooltip(frame, "Prevents kicking for being idle", UDim2.new(0.05, 0, 0.30, 0))
 antiAFKToggle.MouseEnter:Connect(function()
     antiAFKTooltip.Visible = true
 end)
@@ -250,13 +626,13 @@ antiAFKToggle.MouseLeave:Connect(function()
     antiAFKTooltip.Visible = false
 end)
 
-local loopToggle = createButton(frame, "Loop TP: OFF", UDim2.new(0.05, 0, 0.25, 0), function(btn, on, off)
+local loopToggle = createButton(frame, "Loop TP: OFF", UDim2.new(0.05, 0, 0.35, 0), function(btn, on, off)
     loopTPEnabled = not loopTPEnabled
     btn.Text = "Loop TP: " .. (loopTPEnabled and "ON" or "OFF")
     btn.BackgroundColor3 = loopTPEnabled and on or off
 end)
 
-local loopTooltip = createTooltip(frame, "Teleports between added points in loop", UDim2.new(0.05, 0, 0.30, 0))
+local loopTooltip = createTooltip(frame, "Teleports between added points in loop", UDim2.new(0.05, 0, 0.40, 0))
 loopToggle.MouseEnter:Connect(function()
     loopTooltip.Visible = true
 end)
@@ -264,7 +640,21 @@ loopToggle.MouseLeave:Connect(function()
     loopTooltip.Visible = false
 end)
 
-local clickTPToggle = createButton(frame, "Click TP: OFF", UDim2.new(0.05, 0, 0.35, 0), function(btn, on, off)
+local infJumpToggle = createButton(frame, "Inf Jump: OFF", UDim2.new(0.05, 0, 0.45, 0), function(btn, on, off)
+    infJumpEnabled = not infJumpEnabled
+    btn.Text = "Inf Jump: " .. (infJumpEnabled and "ON" or "OFF")
+    btn.BackgroundColor3 = infJumpEnabled and on or off
+end)
+
+local infJumpTooltip = createTooltip(frame, "Allows infinite jumping", UDim2.new(0.05, 0, 0.50, 0))
+infJumpToggle.MouseEnter:Connect(function()
+    infJumpTooltip.Visible = true
+end)
+infJumpToggle.MouseLeave:Connect(function()
+    infJumpTooltip.Visible = false
+end)
+
+local clickTPToggle = createButton(frame, "Click TP: OFF", UDim2.new(0.05, 0, 0.55, 0), function(btn, on, off)
     clickTPEnabled = not clickTPEnabled
     btn.Text = "Click TP: " .. (clickTPEnabled and "ON" or "OFF")
     btn.BackgroundColor3 = clickTPEnabled and on or off
@@ -273,7 +663,7 @@ local clickTPToggle = createButton(frame, "Click TP: OFF", UDim2.new(0.05, 0, 0.
     clickTPToggleKeySetBtn.Active = clickTPEnabled
 end)
 
-local clickTPTooltip = createTooltip(frame, "Click to teleport to mouse position", UDim2.new(0.05, 0, 0.40, 0))
+local clickTPTooltip = createTooltip(frame, "Click to teleport to mouse position", UDim2.new(0.05, 0, 0.60, 0))
 clickTPToggle.MouseEnter:Connect(function()
     clickTPTooltip.Visible = true
 end)
@@ -281,7 +671,7 @@ clickTPToggle.MouseLeave:Connect(function()
     clickTPTooltip.Visible = false
 end)
 
-local rejoinToggle = createButton(frame, "Rejoin: OFF", UDim2.new(0.05, 0, 0.55, 0), function(btn, on, off)
+local rejoinToggle = createButton(frame, "Rejoin: OFF", UDim2.new(0.05, 0, 0.75, 0), function(btn, on, off)
     rejoinEnabled = not rejoinEnabled
     btn.Text = "Rejoin: " .. (rejoinEnabled and "ON" or "OFF")
     btn.BackgroundColor3 = rejoinEnabled and on or off
@@ -298,7 +688,7 @@ local rejoinToggle = createButton(frame, "Rejoin: OFF", UDim2.new(0.05, 0, 0.55,
     end
 end)
 
-local rejoinTooltip = createTooltip(frame, "Sends !rejoin when damaged", UDim2.new(0.05, 0, 0.60, 0))
+local rejoinTooltip = createTooltip(frame, "Sends !rejoin when damaged", UDim2.new(0.05, 0, 0.80, 0))
 rejoinToggle.MouseEnter:Connect(function()
     rejoinTooltip.Visible = true
 end)
@@ -307,7 +697,7 @@ rejoinToggle.MouseLeave:Connect(function()
 end)
 
 -- Action Buttons
-local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.05, 0, 0.45, 0), function(btn)
+local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.05, 0, 0.65, 0), function(btn)
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         spawnPos = char.HumanoidRootPart.Position
@@ -317,7 +707,7 @@ local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.05, 0, 0.45, 0)
     end
 end)
 
-local setSpawnTooltip = createTooltip(frame, "Sets spawn point for respawn", UDim2.new(0.05, 0, 0.50, 0))
+local setSpawnTooltip = createTooltip(frame, "Sets spawn point for respawn", UDim2.new(0.05, 0, 0.70, 0))
 setSpawnBtn.MouseEnter:Connect(function()
     setSpawnTooltip.Visible = true
 end)
@@ -325,14 +715,14 @@ setSpawnBtn.MouseLeave:Connect(function()
     setSpawnTooltip.Visible = false
 end)
 
-local addPointBtn = createButton(frame, "Add Point", UDim2.new(0.35, 0, 0.25, 0), function()
+local addPointBtn = createButton(frame, "Add Point", UDim2.new(0.35, 0, 0.35, 0), function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         table.insert(loopPoints, char.HumanoidRootPart.Position)
     end
 end)
 
-local addPointTooltip = createTooltip(frame, "Adds current position to Loop TP points", UDim2.new(0.35, 0, 0.30, 0))
+local addPointTooltip = createTooltip(frame, "Adds current position to Loop TP points", UDim2.new(0.35, 0, 0.40, 0))
 addPointBtn.MouseEnter:Connect(function()
     addPointTooltip.Visible = true
 end)
@@ -340,14 +730,14 @@ addPointBtn.MouseLeave:Connect(function()
     addPointTooltip.Visible = false
 end)
 
-local clearPointsBtn = createButton(frame, "Clear Points", UDim2.new(0.65, 0, 0.25, 0), function(btn)
+local clearPointsBtn = createButton(frame, "Clear Points", UDim2.new(0.65, 0, 0.35, 0), function(btn)
     loopPoints = {}
     btn.Text = "Points Cleared!"
     wait(1)
     btn.Text = "Clear Points"
 end)
 
-local clearPointsTooltip = createTooltip(frame, "Clears all Loop TP points", UDim2.new(0.65, 0, 0.30, 0))
+local clearPointsTooltip = createTooltip(frame, "Clears all Loop TP points", UDim2.new(0.65, 0, 0.40, 0))
 clearPointsBtn.MouseEnter:Connect(function()
     clearPointsTooltip.Visible = true
 end)
@@ -359,7 +749,7 @@ end)
 local clickTPToggleKey = Enum.KeyCode.CapsLock
 local clickTPToggleKeyLabel = Instance.new("TextLabel")
 clickTPToggleKeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
-clickTPToggleKeyLabel.Position = UDim2.new(0.35, 0, 0.35, 0)
+clickTPToggleKeyLabel.Position = UDim2.new(0.35, 0, 0.55, 0)
 clickTPToggleKeyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 clickTPToggleKeyLabel.Text = "CapsLock"
 clickTPToggleKeyLabel.Font = Enum.Font.Gotham
@@ -374,7 +764,7 @@ clickTPToggleKeyCorner.Parent = clickTPToggleKeyLabel
 
 local clickTPToggleKeySetBtn = Instance.new("TextButton")
 clickTPToggleKeySetBtn.Size = UDim2.new(0.15, 0, 0, 30)
-clickTPToggleKeySetBtn.Position = UDim2.new(0.65, 0, 0.35, 0)
+clickTPToggleKeySetBtn.Position = UDim2.new(0.65, 0, 0.55, 0)
 clickTPToggleKeySetBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 clickTPToggleKeySetBtn.Text = "Set"
 clickTPToggleKeySetBtn.Font = Enum.Font.Gotham
@@ -396,7 +786,7 @@ clickTPToggleKeySetBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local clickTPToggleKeySetTooltip = createTooltip(frame, "Sets hotkey to toggle Click TP", UDim2.new(0.65, 0, 0.40, 0))
+local clickTPToggleKeySetTooltip = createTooltip(frame, "Sets hotkey to toggle Click TP", UDim2.new(0.65, 0, 0.60, 0))
 clickTPToggleKeySetBtn.MouseEnter:Connect(function()
     clickTPToggleKeySetTooltip.Visible = true
 end)
@@ -475,6 +865,7 @@ player.CharacterAdded:Connect(function(char)
     if rejoinEnabled then
         setupHumanoid(humanoid)
     end
+    updatePlayerAttachment()  -- Update attachment on respawn
 end)
 
 -- Initial Setup
