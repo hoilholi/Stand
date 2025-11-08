@@ -1,1 +1,823 @@
+-- วางใน StarterPlayerScripts หรือ StarterGui
+local player = game.Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
+-- สร้าง ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "TeleportSystemGUI"
+gui.Parent = player:WaitForChild("PlayerGui", 5)
+gui.ResetOnSpawn = false
+
+-- สร้าง Main Frame (Draggable)
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 400, 0, 450) -- ความสูงรองรับ 7 แถว
+frame.Position = UDim2.new(0.5, -200, 0.5, -225)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 0
+frame.Parent = gui
+frame.Visible = true
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = frame
+
+-- ฟังก์ชันสร้าง Tooltip
+local function createTooltip(parent, text, pos)
+    local tooltip = Instance.new("TextLabel")
+    tooltip.Size = UDim2.new(0, 180, 0, 20)
+    tooltip.Position = pos
+    tooltip.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tooltip.BackgroundTransparency = 0.1
+    tooltip.Text = text
+    tooltip.Font = Enum.Font.Gotham
+    tooltip.TextSize = 11
+    tooltip.TextColor3 = Color3.new(1, 1, 1)
+    tooltip.Visible = false
+    tooltip.Parent = parent
+    local tooltipCorner = Instance.new("UICorner")
+    tooltipCorner.CornerRadius = UDim.new(0, 6)
+    tooltipCorner.Parent = tooltip
+    return tooltip
+end
+
+-- ฟังก์ชันสร้างปุ่มที่มีเอฟเฟกต์ Hover และ UIStroke
+local function createButton(parent, text, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.18, 0, 0, 30)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.BackgroundTransparency = 0
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    btn.Parent = parent
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Thickness = 1.5
+    btnStroke.Color = Color3.fromRGB(100, 100, 100)
+    btnStroke.Transparency = 0.5
+    btnStroke.Parent = btn
+    
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        btn.BackgroundTransparency = 0.1
+        btnStroke.Color = Color3.fromRGB(150, 150, 150)
+        btnStroke.Transparency = 0.3
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        btn.BackgroundTransparency = 0
+        btnStroke.Color = Color3.fromRGB(100, 100, 100)
+        btnStroke.Transparency = 0.5
+    end)
+    
+    return btn
+end
+
+-- Title Label
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundTransparency = 1
+title.Text = "Teleport System"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextColor3 = Color3.fromRGB(200, 200, 255)
+title.Parent = frame
+
+-- Separator Labels
+local teleportLabel = Instance.new("TextLabel")
+teleportLabel.Size = UDim2.new(0.9, 0, 0, 18)
+teleportLabel.Position = UDim2.new(0.05, 0, 0.09, 0) -- แถว 1
+teleportLabel.BackgroundTransparency = 1
+teleportLabel.Text = "Teleport System"
+teleportLabel.Font = Enum.Font.Gotham
+teleportLabel.TextSize = 12
+teleportLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+teleportLabel.Parent = frame
+
+-- แถว 2: Waypoint
+local waypointFrame = Instance.new("ScrollingFrame")
+waypointFrame.Size = UDim2.new(0.9, 0, 0, 80)
+waypointFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
+waypointFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+waypointFrame.BackgroundTransparency = 0.4
+waypointFrame.BorderSizePixel = 0
+waypointFrame.ScrollBarThickness = 5
+waypointFrame.Parent = frame
+
+local waypointListLayout = Instance.new("UIListLayout")
+waypointListLayout.Padding = UDim.new(0, 6)
+waypointListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+waypointListLayout.Parent = waypointFrame
+
+local waypointCorner = Instance.new("UICorner")
+waypointCorner.CornerRadius = UDim.new(0, 8)
+waypointCorner.Parent = waypointFrame
+
+local waypointNameBox = Instance.new("TextBox")
+waypointNameBox.Size = UDim2.new(0.35, 0, 0, 30)
+waypointNameBox.Position = UDim2.new(0.05, 0, 0.30, 0)
+waypointNameBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+waypointNameBox.PlaceholderText = "Waypoint Name"
+waypointNameBox.Font = Enum.Font.Gotham
+waypointNameBox.TextSize = 12
+waypointNameBox.TextColor3 = Color3.new(1, 1, 1)
+waypointNameBox.Parent = frame
+
+local waypointNameCorner = Instance.new("UICorner")
+waypointNameCorner.CornerRadius = UDim.new(0, 8)
+waypointNameCorner.Parent = waypointNameBox
+
+local waypointNameStroke = Instance.new("UIStroke")
+waypointNameStroke.Thickness = 1.5
+waypointNameStroke.Color = Color3.fromRGB(100, 100, 100)
+waypointNameStroke.Transparency = 0.5
+waypointNameStroke.Parent = waypointNameBox
+
+local addWaypointBtn = createButton(frame, "Add Waypoint", UDim2.new(0.45, 0, 0.30, 0))
+local addWaypointTooltip = createTooltip(frame, "Adds current position and rotation as waypoint with given name", UDim2.new(0.45, 0, 0.36, 0))
+addWaypointBtn.MouseEnter:Connect(function()
+    addWaypointTooltip.Visible = true
+end)
+addWaypointBtn.MouseLeave:Connect(function()
+    addWaypointTooltip.Visible = false
+end)
+
+-- แถว 3: Undo/Redo
+local backTPBtn = createButton(frame, "TP Back", UDim2.new(0.05, 0, 0.40, 0))
+local backTPTooltip = createTooltip(frame, "Teleport to previous position and rotation (Undo)", UDim2.new(0.05, 0, 0.46, 0))
+backTPBtn.MouseEnter:Connect(function()
+    backTPTooltip.Visible = true
+end)
+backTPBtn.MouseLeave:Connect(function()
+    backTPTooltip.Visible = false
+end)
+
+local forwardTPBtn = createButton(frame, "TP Forward", UDim2.new(0.25, 0, 0.40, 0))
+local forwardTPTooltip = createTooltip(frame, "Teleport to next position and rotation (Redo)", UDim2.new(0.25, 0, 0.46, 0))
+forwardTPBtn.MouseEnter:Connect(function()
+    forwardTPTooltip.Visible = true
+end)
+forwardTPBtn.MouseLeave:Connect(function()
+    forwardTPTooltip.Visible = false
+end)
+
+-- แถว 4: TP to Death และ Set Spawn
+local deathTPBtn = createButton(frame, "TP to Death", UDim2.new(0.05, 0, 0.50, 0))
+local deathTPTooltip = createTooltip(frame, "Teleport to last death position and rotation", UDim2.new(0.05, 0, 0.56, 0))
+deathTPBtn.MouseEnter:Connect(function()
+    deathTPTooltip.Visible = true
+end)
+deathTPBtn.MouseLeave:Connect(function()
+    deathTPTooltip.Visible = false
+end)
+
+local setSpawnBtn = createButton(frame, "Set Spawn", UDim2.new(0.25, 0, 0.50, 0))
+local setSpawnTooltip = createTooltip(frame, "Sets spawn point with position and rotation", UDim2.new(0.25, 0, 0.56, 0))
+setSpawnBtn.MouseEnter:Connect(function()
+    setSpawnTooltip.Visible = true
+end)
+setSpawnBtn.MouseLeave:Connect(function()
+    setSpawnTooltip.Visible = false
+end)
+
+-- แถว 5: Item Search และ Click Teleport Hotkey
+local itemSearchBox = Instance.new("TextBox")
+itemSearchBox.Size = UDim2.new(0.25, 0, 0, 30)
+itemSearchBox.Position = UDim2.new(0.05, 0, 0.60, 0)
+itemSearchBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+itemSearchBox.PlaceholderText = "Item Name"
+itemSearchBox.Font = Enum.Font.Gotham
+itemSearchBox.TextSize = 12
+itemSearchBox.TextColor3 = Color3.new(1, 1, 1)
+itemSearchBox.Parent = frame
+
+local itemSearchCorner = Instance.new("UICorner")
+itemSearchCorner.CornerRadius = UDim.new(0, 8)
+itemSearchCorner.Parent = itemSearchBox
+
+local itemSearchStroke = Instance.new("UIStroke")
+itemSearchStroke.Thickness = 1.5
+itemSearchStroke.Color = Color3.fromRGB(100, 100, 100)
+itemSearchStroke.Transparency = 0.5
+itemSearchStroke.Parent = itemSearchBox
+
+local searchItemBtn = createButton(frame, "Search", UDim2.new(0.32, 0, 0.60, 0))
+local searchItemTooltip = createTooltip(frame, "Search for items by name", UDim2.new(0.32, 0, 0.66, 0))
+searchItemBtn.MouseEnter:Connect(function()
+    searchItemTooltip.Visible = true
+end)
+searchItemBtn.MouseLeave:Connect(function()
+    searchItemTooltip.Visible = false
+end)
+
+local clickTeleportKeyLabel = Instance.new("TextLabel")
+clickTeleportKeyLabel.Size = UDim2.new(0.25, 0, 0, 30)
+clickTeleportKeyLabel.Position = UDim2.new(0.52, 0, 0.60, 0)
+clickTeleportKeyLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+clickTeleportKeyLabel.Text = "CapsLock"
+clickTeleportKeyLabel.Font = Enum.Font.Gotham
+clickTeleportKeyLabel.TextSize = 12
+clickTeleportKeyLabel.TextColor3 = Color3.new(1, 1, 1)
+clickTeleportKeyLabel.Parent = frame
+
+local clickTeleportKeyCorner = Instance.new("UICorner")
+clickTeleportKeyCorner.CornerRadius = UDim.new(0, 8)
+clickTeleportKeyCorner.Parent = clickTeleportKeyLabel
+
+local clickTeleportKeyStroke = Instance.new("UIStroke")
+clickTeleportKeyStroke.Thickness = 1.5
+clickTeleportKeyStroke.Color = Color3.fromRGB(100, 100, 100)
+clickTeleportKeyStroke.Transparency = 0.5
+clickTeleportKeyStroke.Parent = clickTeleportKeyLabel
+
+local clickTeleportSetBtn = createButton(frame, "Set", UDim2.new(0.79, 0, 0.60, 0))
+local clickTeleportSetTooltip = createTooltip(frame, "Sets hotkey for click teleport", UDim2.new(0.79, 0, 0.66, 0))
+clickTeleportSetBtn.MouseEnter:Connect(function()
+    clickTeleportSetTooltip.Visible = true
+end)
+clickTeleportSetBtn.MouseLeave:Connect(function()
+    clickTeleportSetTooltip.Visible = false
+end)
+
+local waitingForClickTeleportKey = false
+clickTeleportSetBtn.MouseButton1Click:Connect(function()
+    waitingForClickTeleportKey = true
+    clickTeleportKeyLabel.Text = "Press a key..."
+end)
+
+-- แถว 6: Hotkeys (GUI Toggle)
+local hotkeyLabel = Instance.new("TextLabel")
+hotkeyLabel.Size = UDim2.new(0.9, 0, 0, 18)
+hotkeyLabel.Position = UDim2.new(0.05, 0, 0.70, 0)
+hotkeyLabel.BackgroundTransparency = 1
+hotkeyLabel.Text = "Hotkeys"
+hotkeyLabel.Font = Enum.Font.Gotham
+hotkeyLabel.TextSize = 12
+hotkeyLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+hotkeyLabel.Parent = frame
+
+local guiHotkeyLabel = Instance.new("TextLabel")
+guiHotkeyLabel.Size = UDim2.new(0.3, 0, 0, 30)
+guiHotkeyLabel.Position = UDim2.new(0.05, 0, 0.76, 0)
+guiHotkeyLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+guiHotkeyLabel.Text = "LeftAlt"
+guiHotkeyLabel.Font = Enum.Font.Gotham
+guiHotkeyLabel.TextSize = 12
+guiHotkeyLabel.TextColor3 = Color3.new(1, 1, 1)
+guiHotkeyLabel.Parent = frame
+
+local guiHotkeyCorner = Instance.new("UICorner")
+guiHotkeyCorner.CornerRadius = UDim.new(0, 8)
+guiHotkeyCorner.Parent = guiHotkeyLabel
+
+local guiHotkeySetBtn = createButton(frame, "Set", UDim2.new(0.37, 0, 0.76, 0))
+local guiHotkeySetTooltip = createTooltip(frame, "Sets hotkey to toggle GUI", UDim2.new(0.37, 0, 0.82, 0))
+guiHotkeySetBtn.MouseEnter:Connect(function()
+    guiHotkeySetTooltip.Visible = true
+end)
+guiHotkeySetBtn.MouseLeave:Connect(function()
+    guiHotkeySetTooltip.Visible = false
+end)
+
+local waitingForGuiKey = false
+guiHotkeySetBtn.MouseButton1Click:Connect(function()
+    waitingForGuiKey = true
+    guiHotkeyLabel.Text = "Press a key..."
+end)
+
+-- แถว 7: Players/NPCs และ Items
+local playerTPFrame = Instance.new("ScrollingFrame")
+playerTPFrame.Size = UDim2.new(0.45, 0, 0, 80)
+playerTPFrame.Position = UDim2.new(0.05, 0, 0.86, 0)
+playerTPFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+playerTPFrame.BackgroundTransparency = 0.4
+playerTPFrame.BorderSizePixel = 0
+playerTPFrame.ScrollBarThickness = 5
+playerTPFrame.Parent = frame
+
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.Padding = UDim.new(0, 6)
+playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+playerListLayout.Parent = playerTPFrame
+
+local playerTPCorner = Instance.new("UICorner")
+playerTPCorner.CornerRadius = UDim.new(0, 8)
+playerTPCorner.Parent = playerTPFrame
+
+local playerLabel = Instance.new("TextLabel")
+playerLabel.Size = UDim2.new(0.45, 0, 0, 18)
+playerLabel.Position = UDim2.new(0.05, 0, 0.81, 0)
+playerLabel.BackgroundTransparency = 1
+playerLabel.Text = "Players/NPCs"
+playerLabel.Font = Enum.Font.Gotham
+playerLabel.TextSize = 12
+playerLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+playerLabel.Parent = frame
+
+local itemTPFrame = Instance.new("ScrollingFrame")
+itemTPFrame.Size = UDim2.new(0.45, 0, 0, 80)
+itemTPFrame.Position = UDim2.new(0.52, 0, 0.86, 0)
+itemTPFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+itemTPFrame.BackgroundTransparency = 0.4
+itemTPFrame.BorderSizePixel = 0
+itemTPFrame.ScrollBarThickness = 5
+itemTPFrame.Parent = frame
+
+local itemListLayout = Instance.new("UIListLayout")
+itemListLayout.Padding = UDim.new(0, 6)
+itemListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+itemListLayout.Parent = itemTPFrame
+
+local itemTPCorner = Instance.new("UICorner")
+itemTPCorner.CornerRadius = UDim.new(0, 8)
+itemTPCorner.Parent = itemTPFrame
+
+local itemLabel = Instance.new("TextLabel")
+itemLabel.Size = UDim2.new(0.45, 0, 0, 18)
+itemLabel.Position = UDim2.new(0.52, 0, 0.81, 0)
+itemLabel.BackgroundTransparency = 1
+itemLabel.Text = "Items"
+itemLabel.Font = Enum.Font.Gotham
+itemLabel.TextSize = 12
+itemLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+itemLabel.Parent = frame
+
+-- ตัวแปรสำหรับระบบ Teleport
+local waypoints = {}  -- {name = CFrame}
+local previousPositions = {}  -- undo stack (CFrames)
+local nextPositions = {}  -- redo stack (CFrames)
+local deathPosition = nil  -- CFrame
+local spawnPoint = nil  -- CFrame
+local clickTeleportKey = Enum.KeyCode.CapsLock  -- ค่าเริ่มต้นสำหรับ Click Teleport
+
+-- ฟังก์ชันอัพเดทรายการ Waypoints
+local function updateWaypointList()
+    for _, child in ipairs(waypointFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    for name, cf in pairs(waypoints) do
+        local wpFrame = Instance.new("Frame")
+        wpFrame.Size = UDim2.new(1, 0, 0, 30)
+        wpFrame.BackgroundTransparency = 1
+        wpFrame.Parent = waypointFrame
+        
+        local wpLabel = Instance.new("TextLabel")
+        wpLabel.Size = UDim2.new(0.5, 0, 1, 0)
+        wpLabel.BackgroundTransparency = 1
+        wpLabel.Text = name
+        wpLabel.Font = Enum.Font.Gotham
+        wpLabel.TextSize = 12
+        wpLabel.TextColor3 = Color3.new(1, 1, 1)
+        wpLabel.Parent = wpFrame
+        
+        local tpBtn = Instance.new("TextButton")
+        tpBtn.Size = UDim2.new(0.25, 0, 1, 0)
+        tpBtn.Position = UDim2.new(0.5, 0, 0, 0)
+        tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        tpBtn.Text = "TP"
+        tpBtn.Font = Enum.Font.Gotham
+        tpBtn.TextSize = 12
+        tpBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        tpBtn.Parent = wpFrame
+        local tpCorner = Instance.new("UICorner")
+        tpCorner.CornerRadius = UDim.new(0, 8)
+        tpCorner.Parent = tpBtn
+        
+        local tpStroke = Instance.new("UIStroke")
+        tpStroke.Thickness = 1.5
+        tpStroke.Color = Color3.fromRGB(100, 100, 100)
+        tpStroke.Transparency = 0.5
+        tpStroke.Parent = tpBtn
+        
+        tpBtn.MouseEnter:Connect(function()
+            tpBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+            tpBtn.BackgroundTransparency = 0.1
+            tpStroke.Color = Color3.fromRGB(150, 150, 150)
+            tpStroke.Transparency = 0.3
+        end)
+        tpBtn.MouseLeave:Connect(function()
+            tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            tpBtn.BackgroundTransparency = 0
+            tpStroke.Color = Color3.fromRGB(100, 100, 100)
+            tpStroke.Transparency = 0.5
+        end)
+        
+        tpBtn.MouseButton1Click:Connect(function()
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+                nextPositions = {}  -- Clear redo stack on new teleport
+                char.HumanoidRootPart.CFrame = cf
+            end
+        end)
+        
+        local delBtn = Instance.new("TextButton")
+        delBtn.Size = UDim2.new(0.25, 0, 1, 0)
+        delBtn.Position = UDim2.new(0.75, 0, 0, 0)
+        delBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        delBtn.Text = "Del"
+        delBtn.Font = Enum.Font.Gotham
+        delBtn.TextSize = 12
+        delBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        delBtn.Parent = wpFrame
+        local delCorner = Instance.new("UICorner")
+        delCorner.CornerRadius = UDim.new(0, 8)
+        delCorner.Parent = delBtn
+        
+        local delStroke = Instance.new("UIStroke")
+        delStroke.Thickness = 1.5
+        delStroke.Color = Color3.fromRGB(100, 100, 100)
+        delStroke.Transparency = 0.5
+        delStroke.Parent = delBtn
+        
+        delBtn.MouseEnter:Connect(function()
+            delBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+            delBtn.BackgroundTransparency = 0.1
+            delStroke.Color = Color3.fromRGB(150, 150, 150)
+            delStroke.Transparency = 0.3
+        end)
+        delBtn.MouseLeave:Connect(function()
+            delBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+            delBtn.BackgroundTransparency = 0
+            delStroke.Color = Color3.fromRGB(100, 100, 100)
+            delStroke.Transparency = 0.5
+        end)
+        
+        delBtn.MouseButton1Click:Connect(function()
+            waypoints[name] = nil
+            updateWaypointList()
+        end)
+    end
+    
+    waypointFrame.CanvasSize = UDim2.new(0, 0, 0, waypointListLayout.AbsoluteContentSize.Y)
+end
+
+-- ฟังก์ชันอัพเดทรายการ Players/NPCs
+local function updatePlayerList()
+    for _, child in ipairs(playerTPFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local pFrame = Instance.new("Frame")
+            pFrame.Size = UDim2.new(1, 0, 0, 30)
+            pFrame.BackgroundTransparency = 1
+            pFrame.Parent = playerTPFrame
+            
+            local pLabel = Instance.new("TextLabel")
+            pLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            pLabel.BackgroundTransparency = 1
+            pLabel.Text = p.Name
+            pLabel.Font = Enum.Font.Gotham
+            pLabel.TextSize = 12
+            pLabel.TextColor3 = Color3.new(1, 1, 1)
+            pLabel.Parent = pFrame
+            
+            local tpBtn = Instance.new("TextButton")
+            tpBtn.Size = UDim2.new(0.3, 0, 1, 0)
+            tpBtn.Position = UDim2.new(0.7, 0, 0, 0)
+            tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            tpBtn.Text = "TP"
+            tpBtn.Font = Enum.Font.Gotham
+            tpBtn.TextSize = 12
+            tpBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            tpBtn.Parent = pFrame
+            local tpCorner = Instance.new("UICorner")
+            tpCorner.CornerRadius = UDim.new(0, 8)
+            tpCorner.Parent = tpBtn
+            
+            local tpStroke = Instance.new("UIStroke")
+            tpStroke.Thickness = 1.5
+            tpStroke.Color = Color3.fromRGB(100, 100, 100)
+            tpStroke.Transparency = 0.5
+            tpStroke.Parent = tpBtn
+            
+            tpBtn.MouseEnter:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+                tpBtn.BackgroundTransparency = 0.1
+                tpStroke.Color = Color3.fromRGB(150, 150, 150)
+                tpStroke.Transparency = 0.3
+            end)
+            tpBtn.MouseLeave:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                tpBtn.BackgroundTransparency = 0
+                tpStroke.Color = Color3.fromRGB(100, 100, 100)
+                tpStroke.Transparency = 0.5
+            end)
+            
+            tpBtn.MouseButton1Click:Connect(function()
+                local char = player.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+                    nextPositions = {}  -- Clear redo stack on new teleport
+                    char.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame
+                end
+            end)
+        end
+    end
+    
+    for _, npc in ipairs(workspace:GetDescendants()) do
+        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") and not game.Players:GetPlayerFromCharacter(npc) then
+            local npcFrame = Instance.new("Frame")
+            npcFrame.Size = UDim2.new(1, 0, 0, 30)
+            npcFrame.BackgroundTransparency = 1
+            npcFrame.Parent = playerTPFrame
+            
+            local npcLabel = Instance.new("TextLabel")
+            npcLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            npcLabel.BackgroundTransparency = 1
+            npcLabel.Text = npc.Name
+            npcLabel.Font = Enum.Font.Gotham
+            npcLabel.TextSize = 12
+            npcLabel.TextColor3 = Color3.new(1, 1, 1)
+            npcLabel.Parent = npcFrame
+            
+            local tpBtn = Instance.new("TextButton")
+            tpBtn.Size = UDim2.new(0.3, 0, 1, 0)
+            tpBtn.Position = UDim2.new(0.7, 0, 0, 0)
+            tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            tpBtn.Text = "TP"
+            tpBtn.Font = Enum.Font.Gotham
+            tpBtn.TextSize = 12
+            tpBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            tpBtn.Parent = npcFrame
+            local tpCorner = Instance.new("UICorner")
+            tpCorner.CornerRadius = UDim.new(0, 8)
+            tpCorner.Parent = tpBtn
+            
+            local tpStroke = Instance.new("UIStroke")
+            tpStroke.Thickness = 1.5
+            tpStroke.Color = Color3.fromRGB(100, 100, 100)
+            tpStroke.Transparency = 0.5
+            tpStroke.Parent = tpBtn
+            
+            tpBtn.MouseEnter:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+                tpBtn.BackgroundTransparency = 0.1
+                tpStroke.Color = Color3.fromRGB(150, 150, 150)
+                tpStroke.Transparency = 0.3
+            end)
+            tpBtn.MouseLeave:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                tpBtn.BackgroundTransparency = 0
+                tpStroke.Color = Color3.fromRGB(100, 100, 100)
+                tpStroke.Transparency = 0.5
+            end)
+            
+            tpBtn.MouseButton1Click:Connect(function()
+                local char = player.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+                    nextPositions = {}  -- Clear redo stack on new teleport
+                    char.HumanoidRootPart.CFrame = npc.HumanoidRootPart.CFrame
+                end
+            end)
+        end
+    end
+    
+    playerTPFrame.CanvasSize = UDim2.new(0, 0, 0, playerListLayout.AbsoluteContentSize.Y)
+end
+
+-- ฟังก์ชันอัพเดทรายการ Items
+local function updateItemList(search)
+    search = search or ""
+    search = search:lower()
+    for _, child in ipairs(itemTPFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+    
+    for _, item in ipairs(workspace:GetDescendants()) do
+        if item:IsA("Tool") and item:FindFirstChild("Handle") and (search == "" or item.Name:lower():find(search, 1, true)) then
+            local itemFrame = Instance.new("Frame")
+            itemFrame.Size = UDim2.new(1, 0, 0, 30)
+            itemFrame.BackgroundTransparency = 1
+            itemFrame.Parent = itemTPFrame
+            
+            local itemLabel = Instance.new("TextLabel")
+            itemLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            itemLabel.BackgroundTransparency = 1
+            itemLabel.Text = item.Name
+            itemLabel.Font = Enum.Font.Gotham
+            itemLabel.TextSize = 12
+            itemLabel.TextColor3 = Color3.new(1, 1, 1)
+            itemLabel.Parent = itemFrame
+            
+            local tpBtn = Instance.new("TextButton")
+            tpBtn.Size = UDim2.new(0.3, 0, 1, 0)
+            tpBtn.Position = UDim2.new(0.7, 0, 0, 0)
+            tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            tpBtn.Text = "TP"
+            tpBtn.Font = Enum.Font.Gotham
+            tpBtn.TextSize = 12
+            tpBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            tpBtn.Parent = itemFrame
+            local tpCorner = Instance.new("UICorner")
+            tpCorner.CornerRadius = UDim.new(0, 8)
+            tpCorner.Parent = tpBtn
+            
+            local tpStroke = Instance.new("UIStroke")
+            tpStroke.Thickness = 1.5
+            tpStroke.Color = Color3.fromRGB(100, 100, 100)
+            tpStroke.Transparency = 0.5
+            tpStroke.Parent = tpBtn
+            
+            tpBtn.MouseEnter:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+                tpBtn.BackgroundTransparency = 0.1
+                tpStroke.Color = Color3.fromRGB(150, 150, 150)
+                tpStroke.Transparency = 0.3
+            end)
+            tpBtn.MouseLeave:Connect(function()
+                tpBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                tpBtn.BackgroundTransparency = 0
+                tpStroke.Color = Color3.fromRGB(100, 100, 100)
+                tpStroke.Transparency = 0.5
+            end)
+            
+            tpBtn.MouseButton1Click:Connect(function()
+                local char = player.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+                    nextPositions = {}  -- Clear redo stack on new teleport
+                    char.HumanoidRootPart.CFrame = item.Handle.CFrame
+                end
+            end)
+        end
+    end
+    
+    itemTPFrame.CanvasSize = UDim2.new(0, 0, 0, itemListLayout.AbsoluteContentSize.Y)
+end
+
+-- Logic สำหรับ Search Item
+searchItemBtn.MouseButton1Click:Connect(function()
+    updateItemList(itemSearchBox.Text)
+end)
+
+-- อัพเดทรายการเมื่อเปิด GUI
+frame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if frame.Visible then
+        updatePlayerList()
+        updateItemList(itemSearchBox.Text)
+    end
+end)
+
+-- Logic สำหรับ Add Waypoint
+addWaypointBtn.MouseButton1Click:Connect(function()
+    local name = waypointNameBox.Text
+    if name == "" then return end
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        waypoints[name] = char.HumanoidRootPart.CFrame
+        waypointNameBox.Text = ""
+        updateWaypointList()
+    end
+end)
+
+-- Logic สำหรับ TP Back (Undo)
+backTPBtn.MouseButton1Click:Connect(function()
+    if #previousPositions > 0 then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            table.insert(nextPositions, char.HumanoidRootPart.CFrame)
+            local lastCf = table.remove(previousPositions)
+            char.HumanoidRootPart.CFrame = lastCf
+        end
+    end
+end)
+
+-- Logic สำหรับ TP Forward (Redo)
+forwardTPBtn.MouseButton1Click:Connect(function()
+    if #nextPositions > 0 then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+            local nextCf = table.remove(nextPositions)
+            char.HumanoidRootPart.CFrame = nextCf
+        end
+    end
+end)
+
+-- Logic สำหรับ TP to Death
+deathTPBtn.MouseButton1Click:Connect(function()
+    if deathPosition then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+            nextPositions = {}  -- Clear redo stack on new teleport
+            char.HumanoidRootPart.CFrame = deathPosition
+        end
+    end
+end)
+
+-- Logic สำหรับ Set Spawn
+setSpawnBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        spawnPoint = char.HumanoidRootPart.CFrame
+    end
+end)
+
+-- Listener สำหรับ Respawn to Spawn Point
+player.CharacterAdded:Connect(function(char)
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    if spawnPoint then
+        hrp.CFrame = spawnPoint
+    end
+end)
+
+-- Listener สำหรับ Death Position
+local function onDied()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        deathPosition = char.HumanoidRootPart.CFrame
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    local humanoid = char:WaitForChild("Humanoid")
+    humanoid.Died:Connect(onDied)
+end)
+
+if player.Character then
+    local humanoid = player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(onDied)
+    end
+end
+
+-- การจัดการ Draggable Frame
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- การจัดการ Click Teleport ด้วย Hotkey
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if waitingForGuiKey then
+            guiHotkey = input.KeyCode
+            guiHotkeyLabel.Text = input.KeyCode.Name
+            waitingForGuiKey = false
+        elseif waitingForClickTeleportKey then
+            clickTeleportKey = input.KeyCode
+            clickTeleportKeyLabel.Text = input.KeyCode.Name
+            waitingForClickTeleportKey = false
+        elseif input.KeyCode == guiHotkey then
+            frame.Visible = not frame.Visible
+            if frame.Visible then
+                updatePlayerList()
+                updateItemList(itemSearchBox.Text)
+            end
+        end
+    elseif input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(clickTeleportKey) then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local mouse = player:GetMouse()
+            local hit = mouse.Hit
+            table.insert(previousPositions, char.HumanoidRootPart.CFrame)
+            nextPositions = {}  -- Clear redo stack on new teleport
+            char.HumanoidRootPart.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0)) * char.HumanoidRootPart.CFrame.Rotation
+        end
+    end
+end)
+
+-- อัพเดทรายการเริ่มต้น
+updateWaypointList()
+updatePlayerList()
+updateItemList()
